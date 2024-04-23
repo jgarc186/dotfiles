@@ -6,3 +6,6 @@ ln -s $DOTFILES/tmux/tmux.conf $HOME/.tmux.conf
 
 rm -rf $HOME/.zshrc
 ln -s $DOTFILES/zshrc/zshrc.conf $HOME/.zshrc
+
+rm -rf $HOME/.vimrc
+ln -s $DOTFILES/vimrc/.vimrc $HOME/.vimrc
