@@ -21,3 +21,10 @@ style = "Italic"
 #family = "Operator Mono Bold"
 #style = "regular"
 
+[window]
+
+decorations = "Transparent"
+
+opacity = 0.9
+
+padding = { x = 10, y = 30 }
