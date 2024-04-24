@@ -3,18 +3,21 @@ live_config_reload = true
 [font]
 size = 15.5
 
+builtin_box_drawing = true
+
 #[font.bold]
 #family = "Operator Mono Bold"
 #style = "Bold"
 
-[font.bold_italic]
-family = "Operator Mono"
-style = "Bold Italic"
+#[font.bold_italic]
+#family = "Operator Mono"
+#style = "Bold Italic"
 
-#[font.italic]
-#family = "OperatorMono"
-#style = "Italic"
+[font.italic]
+family = "Operator Mono"
+style = "Italic"
 
 #[font.normal]
 #family = "Operator Mono Bold"
 #style = "regular"
+
