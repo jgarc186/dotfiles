@@ -12,3 +12,7 @@ ln -s $DOTFILES/vimrc/.vimrc $HOME/.vimrc
 
 rm -rf $HOME/.alacritty.toml
 ln -s $DOTFILES/alacritty/alacritty.toml $HOME/.alacritty.toml
+
+rm -rf $HOME/.hushlogin
+touch $HOME/.hushlogin
+
