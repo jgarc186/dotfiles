@@ -3,31 +3,19 @@ live_config_reload = true
 [font]
 size = 15.5
 
+offset = { x = 1, y = 3 }
+
 builtin_box_drawing = true
 
-#[font.bold]
-#family = "Operator Mono Bold"
-#style = "Bold"
-
-#[font.bold_italic]
-#family = "Operator Mono"
-#style = "Bold Italic"
-
-[font.italic]
-family = "Operator Mono"
-style = "Italic"
-
-#[font.normal]
-#family = "Operator Mono Bold"
-#style = "regular"
+normal = { family = "Operator Mono", style = "Medium Italic" }
 
 [window]
 
-decorations = "Transparent"
+decorations = "Full" #"Transparent"
 
 opacity = 0.9
 
-padding = { x = 10, y = 30 }
+padding = { x = 10, y = 10 }
 
 # Default colors
 [colors.primary]

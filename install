@@ -16,3 +16,5 @@ ln -s $DOTFILES/alacritty/alacritty.toml $HOME/.alacritty.toml
 rm -rf $HOME/.hushlogin
 touch $HOME/.hushlogin
 
+rm -rf $HOME/.config/nvim
+ln -s $DOTFILES/nvim $HOME/.config/nvim
