@@ -18,3 +18,7 @@ touch $HOME/.hushlogin
 
 rm -rf $HOME/.config/nvim
 ln -s $DOTFILES/nvim $HOME/.config/nvim
+
+rm -rf $HOME/.warp
+ln -s $DOTFILES/warp $HOME/.warp
+
