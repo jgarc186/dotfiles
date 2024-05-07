@@ -65,4 +65,4 @@ vim.keymap.set('n', '<leader>g', [[<cmd>lua require('telescope').extensions.live
 vim.keymap.set('n', '<leader>e', [[<cmd>lua require('telescope.builtin').buffers()<CR>]])
 
 -- Open History
-vim.keymap.set('n', '<leader>h', [[<cmd>lua require('telescope.builtin').oldfiles()<CR>]])
+vim.keymap.set('n', '<leader>f', [[<cmd>lua require('telescope.builtin').oldfiles()<CR>]])
