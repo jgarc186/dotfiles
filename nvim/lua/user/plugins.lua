@@ -32,7 +32,21 @@ use({
     'catppuccin/nvim',
     as = 'catppuccin',
     config = function()
-        vim.cmd('colorscheme catppuccin-macchiato')
+        -- options: latte, frappe, macchiato, mocha
+        vim.cmd('colorscheme catppuccin-mocha')
+
+        vim.api.nvim_set_hl(0, 'FloatBorder', {
+            fg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
+            bg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
+        })
+
+        -- Make the cursor line invisible
+        vim.api.nvim_set_hl(0, 'CursorLinmeBg', {
+            fg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
+            bg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
+        })
+
+        vim.api.nvim_set_hl(0, 'NvimTreeIndentMarker', { fg = '#30323E' })
     end,
 })
 
@@ -58,7 +72,7 @@ use({
     'kyazdani42/nvim-tree.lua',
     requires = 'kyazdani42/nvim-web-devicons',
     config = function()
-        require('nvim-tree').setup()
+        require('user/plugins/nvim-tree')
     end,
 })
 
