@@ -19,3 +19,16 @@ vim.keymap.set('i', ',,', '<Esc>A,')
 -- Quickly clear search highlighting.
 vim.keymap.set('n', '<leader>k', ':nohlsearch<CR>')
 
+-- Open right and button split
+vim.keymap.set('n', '<leader>r', ':vsplit<CR>')
+vim.keymap.set('n', '<leader>b', ':split<CR>')
+
+-- move between splits
+vim.api.nvim_set_keymap('n', '<leader>j', '<C-w>j', {noremap = true})
+vim.api.nvim_set_keymap('n', '<leader>k', '<C-w>k', {noremap = true})
+vim.api.nvim_set_keymap('n', '<leader>l', '<C-w>l', {noremap = true})
+vim.api.nvim_set_keymap('n', '<leader>h', '<C-w>h', {noremap = true})
+
+-- close current window
+vim.keymap.set('n', '<leader>c', ':close<CR>', { noremap = true })
+
