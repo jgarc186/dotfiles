@@ -61,5 +61,8 @@ vim.keymap.set('n', '<leader>p', [[<cmd>lua require('telescope.builtin').find_fi
 -- global search for text
 vim.keymap.set('n', '<leader>g', [[<cmd>lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>]])
 
--- Open all recent files && history
-vim.keymap.set('n', '<leader>e', [[<cmd>lua require('telescope.builtin').oldfiles()<CR>]])
+-- Open recent files
+vim.keymap.set('n', '<leader>e', [[<cmd>lua require('telescope.builtin').buffers()<CR>]])
+
+-- Open History
+vim.keymap.set('n', '<leader>h', [[<cmd>lua require('telescope.builtin').oldfiles()<CR>]])
