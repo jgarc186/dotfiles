@@ -45,6 +45,12 @@ use({
             fg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
             bg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
         })
+        
+        vim.api.nvim_set_hl(0, 'StatusLineNonText', {
+            fg = vim.api.nvim_get_hl_by_name('NonText', true).foreground,
+            bg = vim.api.nvim_get_hl_by_name('StatusLine', true).background,
+        })
+
 
         vim.api.nvim_set_hl(0, 'NvimTreeIndentMarker', { fg = '#30323E' })
     end,
@@ -74,6 +80,49 @@ use({
     config = function()
         require('user/plugins/nvim-tree')
     end,
+})
+
+-- A status line.
+use({
+    'nvim-lualine/lualine.nvim',
+    requires = 'kyazdani42/nvim-web-devicons',
+    config = function()
+        require('user/plugins/lualine')
+    end
+})
+
+-- Display Buffers as tabs
+use({
+    'akinsho/bufferline.nvim',
+    requires = 'kyazdani42/nvim-web-devicons',
+    after = 'catppuccin',
+    config = function()
+        require('user/plugins/bufferline')
+    end
+})
+
+-- Display indentation lines.
+use({
+    'lukas-reineke/indent-blankline.nvim',
+    config = function()
+        require('user/plugins/indent-blankline')
+    end
+})
+
+-- git plugin
+use({
+    'lewis6991/gitsigns.nvim',
+    config = function()
+        require('gitsigns').setup()
+    end
+})
+
+use({
+    'voldikss/vim-floaterm',
+    config = function()
+        vim.keymap.set('n', '<leader>`', ':FloatermToggle<CR>')
+        vim.keymap.set('t', '<leader>`', '<C-\\><C-n>:FloatermToggle<CR>')
+    end
 })
 
 -- Automatically set up your configuration after cloning packer.nvim
