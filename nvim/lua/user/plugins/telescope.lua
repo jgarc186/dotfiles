@@ -58,7 +58,7 @@ require('telescope').load_extension('live_grep_args')
 -- Search all files in the system
 vim.keymap.set('n', '<leader>p', [[<cmd>lua require('telescope.builtin').find_files()<CR>]])
 
--- global search for text
+-- global search for text, we need to install rg. You can use homebrew `brew install rg`
 vim.keymap.set('n', '<leader>g', [[<cmd>lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>]])
 
 -- Open recent files

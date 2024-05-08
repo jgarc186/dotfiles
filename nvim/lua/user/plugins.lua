@@ -147,7 +147,7 @@ use({
 use({
     'neovim/nvim-lspconfig',
     requires = {
-        'williamboman/mason.nvim',
+        { 'williamboman/mason.nvim', build = ':MasonUpdate' },
         'williamboman/mason-lspconfig.nvim'
     },
     config = function()

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@volar/language-service": "^2.2.1"
+  }
+}
