@@ -24,4 +24,15 @@ require('lspconfig').vuels.setup({})
 require('lspconfig').tailwindcss.setup({})
 
 -- mkeymaps
+-- goes to the definition
 vim.keymap.set('n', '<leader>d', '<cmd>lua vim.lsp.buf.definition()<CR>')
+
+-- show what the defintion of a method
+vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
+
+-- goes to the implementation
+vim.keymap.set('n', '<leader>i', ':Telescope lsp_implementations<CR>')
+
+-- shows all the references
+vim.keymap.set('n', '<leader>r', ':Telescope lsp_references<CR>')
+
