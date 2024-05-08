@@ -20,7 +20,7 @@ vim.keymap.set('i', ',,', '<Esc>A,')
 vim.keymap.set('n', '<leader>k', ':nohlsearch<CR>')
 
 -- Open right and button split
-vim.keymap.set('n', '<leader>r', ':vsplit<CR>')
+vim.keymap.set('n', '<leader>v', ':vsplit<CR>')
 vim.keymap.set('n', '<leader>b', ':split<CR>')
 
 -- move between splits
