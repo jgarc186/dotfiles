@@ -7,9 +7,9 @@ require('mason-lspconfig').setup({ automatic_installation = true })
 require('lspconfig').intelephense.setup({})
 
 -- React, Vue, TS, & JS
--- require('lspconfig').volar.setup({
---    filetypes = { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact', 'vue' }
--- })
+require('lspconfig').volar.setup({
+  filetypes = {'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json'}
+})
 require('lspconfig').tsserver.setup({
     filetypes = {
         'typescript',
@@ -19,7 +19,7 @@ require('lspconfig').tsserver.setup({
     cmd = { 'typescript-language-server', '--stdio' }
 })
 
-require('lspconfig').vuels.setup({})
+--require('lspconfig').vuels.setup({})
 
 require('lspconfig').tailwindcss.setup({})
 
