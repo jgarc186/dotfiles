@@ -28,7 +28,6 @@ local use = require('packer').use
 use('wbthomason/packer.nvim')
 
 require("catppuccin").setup({
-    flavour = "Frappe",
     transparent_background = true,
 })
 
@@ -38,7 +37,7 @@ use({
     as = 'catppuccin',
     config = function()
         -- options: latte, frappe, macchiato, mocha
-        vim.cmd('colorscheme catppuccin-frappe')
+        vim.cmd('colorscheme catppuccin')
 
         vim.api.nvim_set_hl(0, 'FloatBorder', {
             fg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
@@ -99,7 +98,7 @@ use({
 use({
     'akinsho/bufferline.nvim',
     requires = 'kyazdani42/nvim-web-devicons',
-    after = 'catppuccin-frappe',
+    after = 'catppuccin',
     config = function()
         require('user/plugins/bufferline')
     end
