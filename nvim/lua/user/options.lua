@@ -41,4 +41,3 @@ vim.opt.signcolumn = 'yes:1'
 vim.opt.undofile = true
 vim.opt.backup = true
 vim.opt.backupdir:remove('.')
-

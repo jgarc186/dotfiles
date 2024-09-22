@@ -1,7 +1,7 @@
 live_config_reload = true
 
 [font]
-size = 15.5
+size = 14
 
 offset = { x = 1, y = 3 }
 
@@ -13,7 +13,7 @@ normal = { family = "JetBrainsMono Nerd Font" }
 
 decorations = "Transparent" #"Transparent"
 
-opacity = 0.6
+opacity = 0.9
 
 padding = { x = 10, y = 10 }
 

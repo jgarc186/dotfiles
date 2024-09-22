@@ -27,6 +27,11 @@ local use = require('packer').use
 -- Packer manage itself.
 use('wbthomason/packer.nvim')
 
+require("catppuccin").setup({
+    flavour = "Frappe",
+    transparent_background = true,
+})
+
 -- Themes
 use({
     'catppuccin/nvim',
@@ -94,7 +99,7 @@ use({
 use({
     'akinsho/bufferline.nvim',
     requires = 'kyazdani42/nvim-web-devicons',
-    after = 'catppuccin',
+    after = 'catppuccin-frappe',
     config = function()
         require('user/plugins/bufferline')
     end
