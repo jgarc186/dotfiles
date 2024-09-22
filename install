@@ -22,3 +22,5 @@ ln -s $DOTFILES/nvim $HOME/.config/nvim
 rm -rf $HOME/.warp
 ln -s $DOTFILES/warp $HOME/.warp
 
+rm -rf $HOME/.config/starship.toml
+ln -s $DOTFILES/starship/starship.toml $HOME/.config/starship.toml

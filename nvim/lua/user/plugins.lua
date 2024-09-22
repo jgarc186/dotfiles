@@ -33,7 +33,7 @@ use({
     as = 'catppuccin',
     config = function()
         -- options: latte, frappe, macchiato, mocha
-        vim.cmd('colorscheme catppuccin-mocha')
+        vim.cmd('colorscheme catppuccin-frappe')
 
         vim.api.nvim_set_hl(0, 'FloatBorder', {
             fg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
@@ -50,7 +50,6 @@ use({
             fg = vim.api.nvim_get_hl_by_name('NonText', true).foreground,
             bg = vim.api.nvim_get_hl_by_name('StatusLine', true).background,
         })
-
 
         vim.api.nvim_set_hl(0, 'NvimTreeIndentMarker', { fg = '#30323E' })
     end,
