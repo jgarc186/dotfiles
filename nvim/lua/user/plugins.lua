@@ -63,7 +63,7 @@ use({
 use('github/copilot.vim')
 
 -- Commenting support
- use('tpope/vim-commentary')
+use('tpope/vim-commentary')
 
 -- Fuzzy finder
 use({
