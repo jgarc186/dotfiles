@@ -27,9 +27,7 @@ local use = require('packer').use
 -- Packer manage itself.
 use('wbthomason/packer.nvim')
 
-require("catppuccin").setup({
-    transparent_background = true,
-})
+require("catppuccin").setup({})
 
 -- Themes
 use({
