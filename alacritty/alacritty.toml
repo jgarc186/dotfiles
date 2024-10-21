@@ -11,9 +11,9 @@ normal = { family = "JetBrainsMono Nerd Font" }
 
 [window]
 
-decorations = "Transparent" #"Transparent"
+#decorations = "Transparent" #"Transparent"
 
-opacity = 0.8
+opacity = 1.0
 
 padding = { x = 10, y = 10 }
 

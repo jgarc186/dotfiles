@@ -6,8 +6,25 @@ require('mason-lspconfig').setup({ automatic_installation = true })
 require('lspconfig').intelephense.setup({})
 
 -- React, Vue, TS, & JS
-require('lspconfig').tsserver.setup({
-    filetypes = { 'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'jsx', 'tsx' },
+require('lspconfig').ts_ls.setup({
+    init_options = {
+        plugins = {
+            {
+                name = '@vue/typescript-plugin',
+                location = '/home/jose-garcia/developer/josegarcia/dotfiles/node_modules/@vue/typescript-plugin',
+                languages = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' }
+            }
+        }
+    },
+    filetypes = { 
+        "javascript", 
+        "javascriptreact", 
+        "javascript.jsx", 
+        "typescript", 
+        "typescriptreact", 
+        "typescript.tsx",
+        "vue"
+    },
     cmd = { 'typescript-language-server', '--stdio' }
 })
 require('lspconfig').volar.setup({
@@ -18,11 +35,15 @@ require('lspconfig').volar.setup({
 -- Python language server
 require('lspconfig').basedpyright.setup({})
 
--- Ruby Language server
-require('lspconfig').ruby_lsp.setup({})
-
 -- tailwind css Language Server
 require('lspconfig').tailwindcss.setup({})
+
+-- C# Language server
+require('lspconfig').omnisharp.setup({
+    cmd = { 'omnisharp', '--languageserver' },
+    filetypes = { 'cs', 'vb' },
+    root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj', '*.fsproj'),
+})
 
 -- mkeymaps
 -- goes to the definition
