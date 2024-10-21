@@ -27,6 +27,8 @@ require('lspconfig').ts_ls.setup({
     },
     cmd = { 'typescript-language-server', '--stdio' }
 })
+-- @IMPORTANT: Volar is required setup after ts_ls, 
+-- need to make sure that @vue/typescript-plugin and Volar of identical versions
 require('lspconfig').volar.setup({
     filetypes = {'vue'},
     cmd = { 'vue-language-server', '--stdio' }
