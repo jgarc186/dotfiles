@@ -3,7 +3,11 @@ require('mason').setup()
 require('mason-lspconfig').setup({ automatic_installation = true })
 
 -- PHP:
-require('lspconfig').intelephense.setup({})
+require('lspconfig').intelephense.setup({
+    cmd = { 'intelephense', '--stdio' },
+    filetypes = { 'php' },
+    root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
+})
 
 -- React, Vue, TS, & JS
 require('lspconfig').ts_ls.setup({
