@@ -2,11 +2,14 @@
 require('mason').setup()
 require('mason-lspconfig').setup({ automatic_installation = true })
 
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
 -- PHP:
 require('lspconfig').intelephense.setup({
     cmd = { 'intelephense', '--stdio' },
     filetypes = { 'php' },
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
+    capabilities = capabilities,
 })
 
 -- React, Vue, TS, & JS
@@ -29,26 +32,33 @@ require('lspconfig').ts_ls.setup({
         "typescript.tsx",
         "vue"
     },
-    cmd = { 'typescript-language-server', '--stdio' }
+    cmd = { 'typescript-language-server', '--stdio' },
+    capabilities = capabilities,
 })
 -- @IMPORTANT: Volar is required setup after ts_ls, 
 -- need to make sure that @vue/typescript-plugin and Volar of identical versions
 require('lspconfig').volar.setup({
     filetypes = {'vue'},
-    cmd = { 'vue-language-server', '--stdio' }
+    cmd = { 'vue-language-server', '--stdio' },
+    capabilities = capabilities,
 })
 
 -- Python language server
-require('lspconfig').basedpyright.setup({})
+require('lspconfig').basedpyright.setup({
+    capabilities = capabilities,
+})
 
 -- tailwind css Language Server
-require('lspconfig').tailwindcss.setup({})
+require('lspconfig').tailwindcss.setup({
+    capabilities = capabilities,
+})
 
 -- C# Language server
 require('lspconfig').omnisharp.setup({
     cmd = { 'omnisharp', '--languageserver' },
     filetypes = { 'cs', 'vb' },
     root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj', '*.fsproj'),
+    capabilities = capabilities,
 })
 
 -- mkeymaps
