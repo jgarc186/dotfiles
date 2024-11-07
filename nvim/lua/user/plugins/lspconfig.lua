@@ -6,14 +6,15 @@ local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
 -- PHP:
 require('lspconfig').intelephense.setup({
+    capabilities = capabilities,
     cmd = { 'intelephense', '--stdio' },
     filetypes = { 'php' },
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
-    capabilities = capabilities,
 })
 
 -- React, Vue, TS, & JS
 require('lspconfig').ts_ls.setup({
+    capabilities = capabilities,
     init_options = {
         plugins = {
             {
@@ -33,14 +34,13 @@ require('lspconfig').ts_ls.setup({
         "vue"
     },
     cmd = { 'typescript-language-server', '--stdio' },
-    capabilities = capabilities,
 })
 -- @IMPORTANT: Volar is required setup after ts_ls, 
 -- need to make sure that @vue/typescript-plugin and Volar of identical versions
 require('lspconfig').volar.setup({
+    capabilities = capabilities,
     filetypes = {'vue'},
     cmd = { 'vue-language-server', '--stdio' },
-    capabilities = capabilities,
 })
 
 -- Python language server
@@ -55,10 +55,10 @@ require('lspconfig').tailwindcss.setup({
 
 -- C# Language server
 require('lspconfig').omnisharp.setup({
+    capabilities = capabilities,
     cmd = { 'omnisharp', '--languageserver' },
     filetypes = { 'cs', 'vb' },
     root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj', '*.fsproj'),
-    capabilities = capabilities,
 })
 
 -- mkeymaps
