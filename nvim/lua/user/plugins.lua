@@ -157,8 +157,12 @@ use({
 use({
     'neovim/nvim-lspconfig',
     requires = {
-        { 'williamboman/mason.nvim', build = ':MasonUpdate' },
-        'williamboman/mason-lspconfig.nvim'
+        { 
+            'williamboman/mason.nvim', 
+            build = ':MasonUpdate' 
+        },
+        'williamboman/mason-lspconfig.nvim',
+        'b0o/schemastore.nvim',
     },
     config = function()
         require('user/plugins/lspconfig')

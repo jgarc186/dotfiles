@@ -53,6 +53,16 @@ require('lspconfig').tailwindcss.setup({
     capabilities = capabilities,
 })
 
+-- json
+require('lspconfig').jsonls.setup({
+    capabilities = capabilities,
+    settings = {
+        json = {
+            schemas = require('schemastore').json.schemas()
+        }
+    }
+})
+
 -- C# Language server
 require('lspconfig').omnisharp.setup({
     capabilities = capabilities,
