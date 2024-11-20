@@ -169,6 +169,17 @@ use({
     end
 })
 
+-- Formatter
+use({
+    "nvimtools/none-ls.nvim", -- Correct repository name
+    requires = { 
+        "nvim-lua/plenary.nvim" -- Ensure correct repository name for plenary.nvim
+    },
+    config = function()
+        require('user.plugins.none-ls') -- Ensure the path matches your configuration file
+    end
+})
+
 -- Autocompletion
 use({
     'hrsh7th/nvim-cmp',
