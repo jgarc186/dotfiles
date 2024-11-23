@@ -63,13 +63,26 @@ require('lspconfig').jsonls.setup({
     }
 })
 
--- C# Language server
-require('lspconfig').omnisharp.setup({
+-- C# language server
+require('lspconfig').omnisharp.setup {
     capabilities = capabilities,
-    cmd = { 'omnisharp', '--languageserver' },
-    filetypes = { 'cs', 'vb' },
-    root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj', '*.fsproj'),
-})
+    cmd = {
+         vim.fn.expand("~/developer/josegarcia/dotfiles/omnisharp/run"),
+        "--languageserver",
+        "--hostPID",
+        tostring(vim.fn.getpid())
+    },
+    root_dir = require('lspconfig.util').root_pattern("*.sln", "*.csproj") or vim.fn.getcwd(),
+    filetypes = { "cs" },
+    init_options = {
+        FormattingOptions = {
+            OrganizeImports = true,
+            tabSize = 4,
+            insertSpaces = true,
+        }
+    },
+    autostart = true,
+}
 
 -- mkeymaps
 -- goes to the definition

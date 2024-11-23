@@ -32,3 +32,6 @@ vim.api.nvim_set_keymap('n', '<leader>h', '<C-w>h', {noremap = true})
 -- close current window
 vim.keymap.set('n', '<leader>c', ':close<CR>', { noremap = true })
 
+-- Build, and rebuild c# projects
+vim.keymap.set('n', '<leader>bb', ':OmniSharpBuild<CR>', { noremap = true })
+vim.keymap.set('n', '<leader>br', ':OmniSharpRebuild<CR>', { noremap = true })
