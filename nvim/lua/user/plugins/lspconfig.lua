@@ -67,10 +67,12 @@ require('lspconfig').jsonls.setup({
 require('lspconfig').omnisharp.setup {
     capabilities = capabilities,
     cmd = {
-         vim.fn.expand("~/developer/josegarcia/dotfiles/omnisharp/run"),
+         vim.fn.expand("~/developer/dotfiles/omnisharp/run"),
         "--languageserver",
         "--hostPID",
-        tostring(vim.fn.getpid())
+        tostring(vim.fn.getpid()),
+        "--dotnet:root=/opt/homebrew/opt/dotnet@8/bin/dotnet",
+        "--msbuild:useBundledMSBuild"
     },
     root_dir = require('lspconfig.util').root_pattern("*.sln", "*.csproj") or vim.fn.getcwd(),
     filetypes = { "cs" },
