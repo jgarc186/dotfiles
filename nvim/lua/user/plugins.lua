@@ -33,7 +33,7 @@ use({
     as = 'catppuccin',
     config = function()
         -- options: latte, frappe, macchiato, mocha
-       vim.cmd('colorscheme catppuccin-latte')
+       vim.cmd('colorscheme catppuccin-mocha')
 
         vim.api.nvim_set_hl(0, 'FloatBorder', {
             fg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
