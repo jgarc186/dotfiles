@@ -139,19 +139,19 @@ use({
 })
 
 -- Improive syntax highlighting
-use({
-    'nvim-treesitter/nvim-treesitter',
-    run = function()
-        require('nvim-treesitter.install').update({ with_sync = true })
-    end,
-    requires = {
-        'JoosepAlviste/nvim-ts-context-commentstring',
-        'nvim-treesitter/nvim-treesitter-textobjects'
-    },
-    config = function()
-        require('user.plugins.treesitter')
-    end
-})
+-- use({
+--     'nvim-treesitter/nvim-treesitter',
+--     run = function()
+--         require('nvim-treesitter.install').update({ with_sync = true })
+--     end,
+--     requires = {
+--         'JoosepAlviste/nvim-ts-context-commentstring',
+--         'nvim-treesitter/nvim-treesitter-textobjects'
+--     },
+--     config = function()
+--         require('user.plugins.treesitter')
+--     end
+-- })
 
 -- Language server protocol.
 use({
