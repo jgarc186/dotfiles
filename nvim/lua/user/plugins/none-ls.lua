@@ -19,6 +19,8 @@ local dotnet_format = helpers.make_builtin({
 null_ls.setup({
     sources = {
         dotnet_format, -- Register your custom formatter
+        null_ls.builtins.formatting.prettier, -- Register prettier
+        null_ls.builtins.formatting.phpcsfixer, -- Register phpcsfixer
     },
 })
 
