@@ -19,7 +19,7 @@ require('lspconfig').ts_ls.setup({
         plugins = {
             {
                 name = '@vue/typescript-plugin',
-                location = '/home/jose-garcia/developer/josegarcia/dotfiles/node_modules/@vue/typescript-plugin',
+                location = '/home/jose-garcia/developer/dotfiles/node_modules/@vue/typescript-plugin',
                 languages = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' }
             }
         }
