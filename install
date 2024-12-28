@@ -13,6 +13,10 @@ ln -s $DOTFILES/vimrc/.vimrc $HOME/.vimrc
 rm -rf $HOME/.alacritty.toml
 ln -s $DOTFILES/alacritty/alacritty.toml $HOME/.alacritty.toml
 
+rm -rf $HOME/.config/ghostty/config
+ln -s $DOTFILES/ghostty $HOME/.config/ghostty
+
+
 rm -rf $HOME/.aerospace.toml
 ln -s $DOTFILES/aerospace/aerospace.toml $HOME/.aerospace.toml
 
