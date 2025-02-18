@@ -2,10 +2,11 @@
 require('mason').setup()
 require('mason-lspconfig').setup({ automatic_installation = true })
 
+local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
 -- PHP:
-require('lspconfig').intelephense.setup({
+lsp.intelephense.setup({
     capabilities = capabilities,
     cmd = { 'intelephense', '--stdio' },
     filetypes = { 'php' },
@@ -13,7 +14,7 @@ require('lspconfig').intelephense.setup({
 })
 
 -- React, Vue, TS, & JS
-require('lspconfig').ts_ls.setup({
+lsp.ts_ls.setup({
     capabilities = capabilities,
     init_options = {
         plugins = {
@@ -37,24 +38,24 @@ require('lspconfig').ts_ls.setup({
 })
 -- @IMPORTANT: Volar is required setup after ts_ls, 
 -- need to make sure that @vue/typescript-plugin and Volar of identical versions
-require('lspconfig').volar.setup({
+lsp.volar.setup({
     capabilities = capabilities,
     filetypes = {'vue'},
     cmd = { 'vue-language-server', '--stdio' },
 })
 
 -- Python language server
-require('lspconfig').basedpyright.setup({
+lsp.basedpyright.setup({
     capabilities = capabilities,
 })
 
 -- tailwind css Language Server
-require('lspconfig').tailwindcss.setup({
+lsp.tailwindcss.setup({
     capabilities = capabilities,
 })
 
 -- json
-require('lspconfig').jsonls.setup({
+lsp.jsonls.setup({
     capabilities = capabilities,
     settings = {
         json = {
@@ -64,27 +65,20 @@ require('lspconfig').jsonls.setup({
 })
 
 -- C# language server
-require('lspconfig').omnisharp.setup {
+lsp.csharp_ls.setup({
     capabilities = capabilities,
     cmd = {
-         vim.fn.expand("~/developer/dotfiles/omnisharp/run"),
-        "--languageserver",
-        "--hostPID",
+        'omnisharp',
+        '--languageserver',
+        '--hostPID',
         tostring(vim.fn.getpid()),
-        "--dotnet:root=/opt/homebrew/opt/dotnet@8/bin/dotnet",
-        "--msbuild:useBundledMSBuild"
+        '--dotnet:useGlobalMono=true',
+        '--msbuild:useBundledMSBuild=true',
     },
-    root_dir = require('lspconfig.util').root_pattern("*.sln", "*.csproj") or vim.fn.getcwd(),
-    filetypes = { "cs" },
-    init_options = {
-        FormattingOptions = {
-            OrganizeImports = true,
-            tabSize = 4,
-            insertSpaces = true,
-        }
-    },
+    root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj') or vim.fn.getcwd(),
+    filetypes = { 'cs' },
     autostart = true,
-}
+})
 
 -- mkeymaps
 -- goes to the definition
