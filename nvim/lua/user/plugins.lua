@@ -131,6 +131,15 @@ require("lazy").setup({
     --     end
     -- })
 
+    -- Code folding
+    {
+        'kevinhwang91/nvim-ufo', 
+        dependencies = 'kevinhwang91/promise-async',
+        config = function()
+            require('user/plugins/ufo')
+        end
+    },
+
     -- Language server protocol.
     {
         'neovim/nvim-lspconfig',

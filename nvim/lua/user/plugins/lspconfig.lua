@@ -5,6 +5,11 @@ require('mason-lspconfig').setup({ automatic_installation = true })
 local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
+capabilities.textDocument.foldingRange = {
+    dynamicRegistration = false,
+    lineFoldingOnly = true,
+}
+
 -- PHP:
 lsp.intelephense.setup({
     capabilities = capabilities,
@@ -79,6 +84,7 @@ lsp.csharp_ls.setup({
     filetypes = { 'cs' },
     autostart = true,
 })
+ 
 
 -- mkeymaps
 -- goes to the definition
@@ -92,4 +98,5 @@ vim.keymap.set('n', '<leader>i', ':Telescope lsp_implementations<CR>')
 
 -- shows all the references
 vim.keymap.set('n', '<leader>r', ':Telescope lsp_references<CR>')
+
 
