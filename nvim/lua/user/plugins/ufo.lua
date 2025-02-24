@@ -5,8 +5,10 @@ vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decr
 vim.o.foldlevelstart = 99
 vim.o.foldenable = true
 
-ufo.setup({})
+ufo.setup({
+    -- Kaymaps
+    vim.keymap.set('n', '<leader>o', require('ufo').openAllFolds),
+    vim.keymap.set('n', '<leader>c', require('ufo').closeAllFolds)
+})
 
--- Keymaps
-vim.keymap.set('n', '<leader>o', ufo.openAllFolds) -- Open all folds
-vim.keymap.set('n', '<leader>c', ufo.closeAllFolds) -- Close all folds 
+
