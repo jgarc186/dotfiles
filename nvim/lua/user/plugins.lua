@@ -52,7 +52,7 @@ require("lazy").setup({
     },
 
     -- Github Copilot
-    'github/copilot.vim',
+    -- 'github/copilot.vim',
 
     -- Commenting support
     'tpope/vim-commentary',
