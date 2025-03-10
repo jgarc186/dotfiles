@@ -26,7 +26,7 @@ lsp.ts_ls.setup({
             {
                 name = '@vue/typescript-plugin',
                 location = '/home/jose-garcia/developer/dotfiles/node_modules/@vue/typescript-plugin',
-                languages = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' }
+                languages = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact'} --, 'vue' }
             }
         }
     },
@@ -37,7 +37,7 @@ lsp.ts_ls.setup({
         "typescript", 
         "typescriptreact", 
         "typescript.tsx",
-        "vue"
+        -- "vue"
     },
     cmd = { 'typescript-language-server', '--stdio' },
 })
