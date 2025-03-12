@@ -52,7 +52,7 @@ require("lazy").setup({
     },
 
     -- Github Copilot
-    -- 'github/copilot.vim',
+    'github/copilot.vim',
 
     -- Commenting support
     'tpope/vim-commentary',
@@ -98,12 +98,12 @@ require("lazy").setup({
     },
 
     -- git plugin
-    {
-        'lewis6991/gitsigns.nvim',
-        config = function()
-            require('gitsigns').setup()
-        end
-    },
+    -- {
+    --     'lewis6991/gitsigns.nvim',
+    --     config = function()
+    --         require('gitsigns').setup()
+    --     end
+    -- },
 
     {
         'voldikss/vim-floaterm',
