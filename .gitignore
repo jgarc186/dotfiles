@@ -1,1 +1,4 @@
 node_modules/
+
+### Lazy vim
+nvim/lazy-lock.json
