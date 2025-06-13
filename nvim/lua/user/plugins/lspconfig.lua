@@ -70,17 +70,17 @@ lsp.jsonls.setup({
 })
 
 -- C# language server
-lsp.csharp_ls.setup({
+lsp.omnisharp.setup({
     capabilities = capabilities,
     cmd = {
-        'omnisharp',
+        '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
         '--languageserver',
         '--hostPID',
         tostring(vim.fn.getpid()),
         '--dotnet:useGlobalMono=true',
         '--msbuild:useBundledMSBuild=true',
     },
-    root_dir = require('lspconfig/util').root_pattern('*.sln', '*.csproj') or vim.fn.getcwd(),
+    root_dir = require('lspconfig.util').root_pattern('*.sln', '*.csproj') or vim.fn.getcwd(),
     filetypes = { 'cs' },
     autostart = true,
 })
