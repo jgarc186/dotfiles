@@ -8,6 +8,9 @@ ln -s $DOTFILES/tmux/.tmux.conf $HOME/.tmux.conf
 rm -rf $HOME/.config/tmux
 ln -s $DOTFILES/tmux $HOME/.config/tmux
 
+rm -rf $HOME/.config/hypr
+ln -s $DOTFILES/hypr $HOME/.config/hypr
+
 rm -rf $HOME/.zshrc
 ln -s $DOTFILES/zshrc/zshrc.conf $HOME/.zshrc
 
@@ -38,4 +41,6 @@ ln -s $DOTFILES/starship/starship.toml $HOME/.config/starship.toml
 mkdir -p $HOME/.local/bin
 
 rm -rf $HOME/.local/bin/t
+rm -rf $HOME/.local/bin/change_wallpaper
 ln -s $DOTFILES/scripts/t $HOME/.local/bin/t
+ln -s $DOTFILES/scripts/change_wallpaper $HOME/.local/bin/change_wallpaper

@@ -54,11 +54,6 @@ lsp.basedpyright.setup({
     capabilities = capabilities,
 })
 
--- tailwind css Language Server
-lsp.tailwindcss.setup({
-    capabilities = capabilities,
-})
-
 -- json
 lsp.jsonls.setup({
     capabilities = capabilities,
@@ -73,7 +68,8 @@ lsp.jsonls.setup({
 lsp.omnisharp.setup({
     capabilities = capabilities,
     cmd = {
-        '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
+        -- '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
+        '/usr/bin/omnisharp',
         '--languageserver',
         '--hostPID',
         tostring(vim.fn.getpid()),
