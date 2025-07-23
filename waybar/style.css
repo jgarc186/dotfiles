@@ -1,0 +1,41 @@
+/* Catppuccin */
+* {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: #cdd6f4; /* Text color */
+}
+
+window#waybar {
+    background: transparent;
+    /* background-color: rgba(30, 30, 46, 0.9); /1* Catppuccin Mocha background *1/ */
+    /* border-bottom: 2px solid #89b4fa; /1* Accent border *1/ */
+    padding: 5px;
+}
+
+#workspaces button {
+    background: transparent;
+    border: 1px solid #585b70;
+    border-radius: 6px;
+    margin: 2px;
+    padding: 2px 5px;
+    color: #cdd6f4;
+    transition: all 0.2s ease-in-out;
+}
+
+#workspaces button:hover {
+    background: #313244;
+}
+
+#workspaces button.active {
+    background: #89b4fa;
+    color: #1e1e2e;
+    border-color: #89b4fa;
+}
+
+.modules-left, .modules-right, .modules-center {
+    margin: 10px 8px;
+    padding: 4px 6px;
+    border-radius: 25px;
+    background: rgba(49, 50, 68, 0.8);
+    border: 1px solid #89b4fa;
+}
