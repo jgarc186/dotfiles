@@ -22,5 +22,5 @@ elif hour >= 18 and hour < 21:
 elif hour >= 21 or hour < 6:
     wallpaper = WALLPAPERS["night"]
 
-subprocess.run(["hyprctl", "hyprpaper", "preload", wallpaper])
-subprocess.run(["hyprctl", "hyprpaper", "wallpaper", f",{wallpaper}"])
+subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "preload", wallpaper])
+subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "wallpaper", f",{wallpaper}"])
