@@ -220,7 +220,7 @@ require("lazy").setup({
         providers = {
           ollama = {
             endpoint = "http://localhost:11434",
-            model = "deepseek-coder:6.7b",
+            model = "deepseek-coder:1.3b",
           },
         }
       },

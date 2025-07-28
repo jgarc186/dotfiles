@@ -18,4 +18,4 @@ nmap <leader><space> :nohlsearch<cr>
 
 "------- Auto Commands -------"
 "Helps to source the vimrc file on save.
-autocmd BufWrittePost .vimrc source %
+autocmd BufWritePost .vimrc source %
