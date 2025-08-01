@@ -68,8 +68,8 @@ lsp.jsonls.setup({
 lsp.omnisharp.setup({
     capabilities = capabilities,
     cmd = {
-        -- '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
-        '/usr/bin/omnisharp',
+        '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
+        -- '/usr/bin/omnisharp',
         '--languageserver',
         '--hostPID',
         tostring(vim.fn.getpid()),

@@ -111,9 +111,9 @@ require("lazy").setup({
     {
         'voldikss/vim-floaterm',
         config = function()
-            vim.g.floaterm_wintype = 'vsplit'
-            --vim.g.floaterm_height = 0.2
-            vim.g.floaterm_width = 0.2
+            vim.g.floaterm_wintype = 'split' -- 'vsplit' is for vertical split
+            vim.g.floaterm_height = 0.2
+            -- vim.g.floaterm_width = 0.2
             vim.keymap.set('n', '<leader>`', ':FloatermToggle<CR>')
             vim.keymap.set('t', '<leader>`', '<C-\\><C-n>:FloatermToggle<CR>')
         end
@@ -220,7 +220,7 @@ require("lazy").setup({
         providers = {
           ollama = {
             endpoint = "http://localhost:11434",
-            model = "deepseek-coder:1.3b",
+            model = "deepseek-coder:6.7b",
           },
         }
       },
