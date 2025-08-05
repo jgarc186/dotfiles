@@ -18,18 +18,9 @@ lsp.intelephense.setup({
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
 })
 
--- React, Vue, TS, & JS
+-- React, TS, & JS
 lsp.ts_ls.setup({
     capabilities = capabilities,
-    init_options = {
-        plugins = {
-            {
-                name = '@vue/typescript-plugin',
-                location = '/home/jose-garcia/developer/dotfiles/node_modules/@vue/typescript-plugin',
-                languages = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact'} --, 'vue' }
-            }
-        }
-    },
     filetypes = { 
         "javascript", 
         "javascriptreact", 
@@ -37,10 +28,10 @@ lsp.ts_ls.setup({
         "typescript", 
         "typescriptreact", 
         "typescript.tsx",
-        -- "vue"
-    },
+    },    
     cmd = { 'typescript-language-server', '--stdio' },
 })
+
 -- @IMPORTANT: Volar is required setup after ts_ls, 
 -- need to make sure that @vue/typescript-plugin and Volar of identical versions
 lsp.volar.setup({
