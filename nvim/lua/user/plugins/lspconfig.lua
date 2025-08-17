@@ -4,6 +4,13 @@ require('mason-lspconfig').setup({ automatic_installation = true })
 
 local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
+local vue_language_server_path = '~/developer/dotfiles/node_modules/@vue/typescript-plugin'
+local vue_plugin = {
+  name = '@vue/typescript-plugin',
+  location = vue_language_server_path,
+  languages = { 'vue' },
+  configNamespace = 'typescript',
+}
 
 capabilities.textDocument.foldingRange = {
     dynamicRegistration = false,
@@ -18,26 +25,58 @@ lsp.intelephense.setup({
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
 })
 
--- React, TS, & JS
-lsp.ts_ls.setup({
+-- Single LSP for TypeScript + Vue with better performance
+lsp.vtsls.setup({
     capabilities = capabilities,
-    filetypes = { 
-        "javascript", 
-        "javascriptreact", 
-        "javascript.jsx", 
-        "typescript", 
-        "typescriptreact", 
-        "typescript.tsx",
-    },    
-    cmd = { 'typescript-language-server', '--stdio' },
+    settings = {
+    vtsls = {
+      tsserver = {
+        globalPlugins = {
+          vue_plugin,
+        },
+      },
+    },
+  },
+  filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
 })
 
--- @IMPORTANT: Volar is required setup after ts_ls, 
--- need to make sure that @vue/typescript-plugin and Volar of identical versions
-lsp.volar.setup({
-    capabilities = capabilities,
-    filetypes = {'vue'},
-    cmd = { 'vue-language-server', '--stdio' },
+lsp.vue_ls.setup({
+  capabilities = capabilities,
+  on_init = function(client)
+    client.handlers['tsserver/request'] = function(_, result, context)
+      local ts_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'ts_ls' })
+      local vtsls_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'vtsls' })
+      local clients = {}
+
+      vim.list_extend(clients, ts_clients)
+      vim.list_extend(clients, vtsls_clients)
+
+      if #clients == 0 then
+        vim.notify('Could not find `vtsls` or `ts_ls` lsp client, `vue_ls` would not work without it.', vim.log.levels.ERROR)
+        return
+      end
+      local ts_client = clients[1]
+
+      local param = unpack(result)
+      local id, command, payload = unpack(param)
+      ts_client:exec_cmd({
+        title = 'vue_request_forward', -- You can give title anything as it's used to represent a command in the UI, `:h Client:exec_cmd`
+        command = 'typescript.tsserverRequest',
+        arguments = {
+          command,
+          payload,
+        },
+      }, { bufnr = context.bufnr }, function(_, r)
+          local response = r and r.body
+          -- TODO: handle error or response nil here, e.g. logging
+          -- NOTE: Do NOT return if there's an error or no response, just return nil back to the vue_ls to prevent memory leak
+          local response_data = { { id, response } }
+
+          --- @diagnostic disable-next-line: param-type-mismatch
+          client:notify('tsserver/response', response_data)
+        end)
+    end
+  end,
 })
 
 -- Python language server
