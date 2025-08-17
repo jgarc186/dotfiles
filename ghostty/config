@@ -10,6 +10,6 @@ background-opacity = 0.5
 # background-blur-radius = 20
 keybind = shift+enter=text:\n
 
-custom-shader="~/developer/dotfiles/ghostty/shaders/cursor_blaze.glsl"
+custom-shader = shaders/cursor_blaze_no_trail.glsl
 #custom-shader=shaders/cursor_blaze.glsl
 #custom-shader=shaders/cursor_base_no_trail.glsl
