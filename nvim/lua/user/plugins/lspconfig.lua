@@ -27,14 +27,30 @@ lsp.intelephense.setup({
 
 -- Single LSP for TypeScript + Vue with better performance
 lsp.vtsls.setup({
-    capabilities = capabilities,
-    settings = {
-    vtsls = {
-      tsserver = {
-        globalPlugins = {
-          vue_plugin,
-        },
+  capabilities = capabilities,
+  settings = {
+  vtsls = {
+    tsserver = {
+      globalPlugins = {
+        vue_plugin,
       },
+    },
+    -- Add these for better Vue experience
+    experimental = {
+      completion = {
+        enableServerSideFuzzyMatch = true,
+       },
+      },
+    },
+  },
+  typescript = {
+    preferences = {
+      -- Better import paths for Vue components
+      importModuleSpecifier = "relative",
+      includePackageJsonAutoImports = "auto",
+    },
+    suggest = {
+      autoImports = true,
     },
   },
   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
@@ -42,6 +58,20 @@ lsp.vtsls.setup({
 
 lsp.vue_ls.setup({
   capabilities = capabilities,
+  settings = {
+    vue = {
+      hybridMode = true,
+      completion = {
+        autoImport = true,
+        tagCasing = "kebab", -- or "pascal" based on your preference
+      },
+      validation = {
+        template = true,
+        style = true,
+        script = true,
+      },
+    },
+  },
   on_init = function(client)
     client.handlers['tsserver/request'] = function(_, result, context)
       local ts_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'ts_ls' })
