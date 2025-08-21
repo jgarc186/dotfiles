@@ -24,6 +24,7 @@ from datetime import datetime
 # subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "preload", wallpaper])
 # subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "wallpaper", f",{wallpaper}"])
 
-wallpaper = "/home/jose/developer/dotfiles/wallpapers/Rain-World-cats-video-games-Video-Game-Creatures-2168351.png"
-subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "preload", wallpaper])
-subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "wallpaper", f",{wallpaper}"])
+# wallpaper = "/home/jose/developer/dotfiles/wallpapers/Rain-World-cats-video-games-Video-Game-Creatures-2168351.png"
+# wallpaper = "/home/jose/developer/dotfiles/wallpapers/lofi-coffee-shop-night-thumb.jpg"
+# subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "preload", wallpaper])
+# subprocess.run(["/usr/bin/hyprctl", "hyprpaper", "wallpaper", f",{wallpaper}"])
