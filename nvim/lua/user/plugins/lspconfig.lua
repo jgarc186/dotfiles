@@ -5,11 +5,34 @@ require('mason-lspconfig').setup({ automatic_installation = true })
 local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 local vue_language_server_path = '~/developer/dotfiles/node_modules/@vue/typescript-plugin'
+local tsserver_filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' }
 local vue_plugin = {
   name = '@vue/typescript-plugin',
   location = vue_language_server_path,
   languages = { 'vue' },
   configNamespace = 'typescript',
+}
+local vtsls_config = {
+  capabilities = capabilities,
+  settings = {
+    vtsls = {
+      tsserver = {
+        globalPlugins = {
+          vue_plugin,
+        },
+      },
+    },
+  },
+  filetypes = tsserver_filetypes,
+}
+local ts_ls_config = {
+  capabilities = capabilities,
+  init_options = {
+    plugins = {
+      vue_plugin,
+    },
+  },
+  filetypes = tsserver_filetypes,
 }
 
 capabilities.textDocument.foldingRange = {
@@ -25,53 +48,9 @@ lsp.intelephense.setup({
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
 })
 
--- Single LSP for TypeScript + Vue with better performance
-lsp.vtsls.setup({
-  capabilities = capabilities,
-  settings = {
-  vtsls = {
-    tsserver = {
-      globalPlugins = {
-        vue_plugin,
-      },
-    },
-    -- Add these for better Vue experience
-    experimental = {
-      completion = {
-        enableServerSideFuzzyMatch = true,
-       },
-      },
-    },
-  },
-  typescript = {
-    preferences = {
-      -- Better import paths for Vue components
-      importModuleSpecifier = "relative",
-      includePackageJsonAutoImports = "auto",
-    },
-    suggest = {
-      autoImports = true,
-    },
-  },
-  filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
-})
 
-lsp.vue_ls.setup({
+local vue_ls_config = {
   capabilities = capabilities,
-  settings = {
-    vue = {
-      hybridMode = true,
-      completion = {
-        autoImport = true,
-        tagCasing = "kebab", -- or "pascal" based on your preference
-      },
-      validation = {
-        template = true,
-        style = true,
-        script = true,
-      },
-    },
-  },
   on_init = function(client)
     client.handlers['tsserver/request'] = function(_, result, context)
       local ts_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'ts_ls' })
@@ -102,12 +81,16 @@ lsp.vue_ls.setup({
           -- NOTE: Do NOT return if there's an error or no response, just return nil back to the vue_ls to prevent memory leak
           local response_data = { { id, response } }
 
-          --- @diagnostic disable-next-line: param-type-mismatch
+          ---@diagnostic disable-next-line: param-type-mismatch
           client:notify('tsserver/response', response_data)
         end)
     end
   end,
-})
+}
+
+lsp.vtsls.setup(vtsls_config)
+lsp.ts_ls.setup(ts_ls_config)
+lsp.volar.setup(vue_ls_config)
 
 -- Python language server
 lsp.basedpyright.setup({
@@ -154,5 +137,3 @@ vim.keymap.set('n', '<leader>i', ':Telescope lsp_implementations<CR>')
 
 -- shows all the references
 vim.keymap.set('n', '<leader>r', ':Telescope lsp_references<CR>')
-
-
