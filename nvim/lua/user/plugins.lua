@@ -168,6 +168,12 @@ require("lazy").setup({
         end
     },
 
+    -- Improve support for Vue
+    { 
+        'neoclide/coc.nvim', 
+        branch = 'release', 
+    },
+
     -- Formatter
     {
         "nvimtools/none-ls.nvim", -- Correct repository name
@@ -201,6 +207,6 @@ require("lazy").setup({
         'MeanderingProgrammer/render-markdown.nvim',
         dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
         opts = {},
-    },
+    }
 })
 
