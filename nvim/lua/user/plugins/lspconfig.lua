@@ -1,39 +1,20 @@
 -- Setup mason to automatically install LSP server
 require('mason').setup()
-require('mason-lspconfig').setup({ automatic_installation = true })
+require('mason-lspconfig').setup({ 
+  automatic_installation = true,
+  handlers = {
+    function(server_name)
+      -- Skip servers we're configuring manually
+      if server_name == "vtsls" or server_name == "vue_ls" or server_name == "volar" then
+        return
+      end
+      require('lspconfig')[server_name].setup({})
+    end,
+  }
+})
 
 local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
-local vue_language_server_path = '~/developer/dotfiles/node_modules/@vue/typescript-plugin'
-local tsserver_filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' }
-local vue_plugin = {
-  name = '@vue/typescript-plugin',
-  location = vue_language_server_path,
-  languages = { 'vue' },
-  configNamespace = 'typescript',
-}
-local vtsls_config = {
-  capabilities = capabilities,
-  settings = {
-    vtsls = {
-      tsserver = {
-        globalPlugins = {
-          vue_plugin,
-        },
-      },
-    },
-  },
-  filetypes = tsserver_filetypes,
-}
-local ts_ls_config = {
-  capabilities = capabilities,
-  init_options = {
-    plugins = {
-      vue_plugin,
-    },
-  },
-  filetypes = tsserver_filetypes,
-}
 
 capabilities.textDocument.foldingRange = {
     dynamicRegistration = false,
@@ -47,50 +28,45 @@ lsp.intelephense.setup({
     filetypes = { 'php' },
     root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
 })
-
-
-local vue_ls_config = {
+-- vtsls handles TypeScript in Vue files
+local vtsls_config = {
   capabilities = capabilities,
-  on_init = function(client)
-    client.handlers['tsserver/request'] = function(_, result, context)
-      local ts_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'ts_ls' })
-      local vtsls_clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = 'vtsls' })
-      local clients = {}
-
-      vim.list_extend(clients, ts_clients)
-      vim.list_extend(clients, vtsls_clients)
-
-      if #clients == 0 then
-        vim.notify('Could not find `vtsls` or `ts_ls` lsp client, `vue_ls` would not work without it.', vim.log.levels.ERROR)
-        return
-      end
-      local ts_client = clients[1]
-
-      local param = unpack(result)
-      local id, command, payload = unpack(param)
-      ts_client:exec_cmd({
-        title = 'vue_request_forward', -- You can give title anything as it's used to represent a command in the UI, `:h Client:exec_cmd`
-        command = 'typescript.tsserverRequest',
-        arguments = {
-          command,
-          payload,
+  settings = {
+    vtsls = {
+      tsserver = {
+        globalPlugins = {
+          {
+            name = '@vue/typescript-plugin',
+            location = '/Users/josegarcia/developer/dotfiles/node_modules/@vue/typescript-plugin',
+            languages = { 'vue' },
+          },
         },
-      }, { bufnr = context.bufnr }, function(_, r)
-          local response = r and r.body
-          -- TODO: handle error or response nil here, e.g. logging
-          -- NOTE: Do NOT return if there's an error or no response, just return nil back to the vue_ls to prevent memory leak
-          local response_data = { { id, response } }
-
-          ---@diagnostic disable-next-line: param-type-mismatch
-          client:notify('tsserver/response', response_data)
-        end)
-    end
-  end,
+      },
+    },
+  },
+  filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
 }
 
 lsp.vtsls.setup(vtsls_config)
-lsp.ts_ls.setup(ts_ls_config)
-lsp.volar.setup(vue_ls_config)
+
+-- Volar handles Vue-specific features (components, templates, etc)
+lsp.vue_ls.setup({
+  capabilities = capabilities,
+  cmd = { 
+    'node', 
+    '/Users/josegarcia/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js', 
+    '--stdio' 
+  },
+  filetypes = { 'vue' },
+  init_options = {
+    vue = {
+      hybridMode = true,
+    },
+    typescript = {
+      tsdk = '/Users/josegarcia/developer/dotfiles/node_modules/typescript/lib'
+    },
+  },
+})
 
 -- Python language server
 lsp.basedpyright.setup({
