@@ -5,15 +5,20 @@ require('mason-lspconfig').setup({
   handlers = {
     function(server_name)
       -- Skip servers we're configuring manually
-      if server_name == "vtsls" or server_name == "vue_ls" or server_name == "volar" then
+      if server_name == "vtsls" or server_name == "volar" then
         return
       end
-      require('lspconfig')[server_name].setup({})
+      
+      -- Use native API if available, fallback to lspconfig
+      if vim.fn.has('nvim-0.11') == 1 then
+        vim.lsp.config(server_name, {})
+      else
+        require('lspconfig')[server_name].setup({})
+      end
     end,
   }
 })
 
-local lsp = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
 capabilities.textDocument.foldingRange = {
@@ -21,16 +26,28 @@ capabilities.textDocument.foldingRange = {
     lineFoldingOnly = true,
 }
 
--- PHP:
-lsp.intelephense.setup({
-    capabilities = capabilities,
+-- Helper function to setup LSP with both old and new API
+local function setup_lsp(server_name, config)
+  config.capabilities = capabilities
+  
+  if vim.fn.has('nvim-0.11') == 1 then
+    -- Use native vim.lsp.config for Neovim 0.11+
+    vim.lsp.config(server_name, config)
+  else
+    -- Fallback to lspconfig for older versions
+    require('lspconfig')[server_name].setup(config)
+  end
+end
+
+-- PHP
+setup_lsp('intelephense', {
     cmd = { 'intelephense', '--stdio' },
     filetypes = { 'php' },
-    root_dir = require('lspconfig/util').root_pattern('composer.json', '.git'),
+    root_markers = { 'composer.json', '.git' },
 })
+
 -- vtsls handles TypeScript in Vue files
-local vtsls_config = {
-  capabilities = capabilities,
+setup_lsp('vtsls', {
   settings = {
     vtsls = {
       tsserver = {
@@ -45,13 +62,11 @@ local vtsls_config = {
     },
   },
   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
-}
-
-lsp.vtsls.setup(vtsls_config)
+})
 
 -- Volar handles Vue-specific features (components, templates, etc)
-lsp.vue_ls.setup({
-  capabilities = capabilities,
+-- Note: vue_ls is deprecated, but keeping your setup with volar name
+setup_lsp('volar', {
   cmd = { 
     'node', 
     '/Users/josegarcia/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js', 
@@ -69,13 +84,10 @@ lsp.vue_ls.setup({
 })
 
 -- Python language server
-lsp.basedpyright.setup({
-    capabilities = capabilities,
-})
+setup_lsp('basedpyright', {})
 
--- json
-lsp.jsonls.setup({
-    capabilities = capabilities,
+-- JSON
+setup_lsp('jsonls', {
     settings = {
         json = {
             schemas = require('schemastore').json.schemas()
@@ -84,28 +96,42 @@ lsp.jsonls.setup({
 })
 
 -- C# language server
-lsp.omnisharp.setup({
-    capabilities = capabilities,
+setup_lsp('omnisharp', {
     cmd = {
         '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
-        -- '/usr/bin/omnisharp',
         '--languageserver',
         '--hostPID',
         tostring(vim.fn.getpid()),
         '--dotnet:useGlobalMono=true',
         '--msbuild:useBundledMSBuild=true',
     },
-    root_dir = require('lspconfig.util').root_pattern('*.sln', '*.csproj') or vim.fn.getcwd(),
+    root_markers = { '*.sln', '*.csproj' },
     filetypes = { 'cs' },
     autostart = true,
 })
- 
 
--- mkeymaps
+-- Enable LSP on appropriate filetypes for Neovim 0.11+
+if vim.fn.has('nvim-0.11') == 1 then
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = '*',
+    callback = function(args)
+      vim.lsp.enable({
+        'intelephense',
+        'vtsls', 
+        'volar',
+        'basedpyright',
+        'jsonls',
+        'omnisharp',
+      }, args.buf)
+    end,
+  })
+end
+
+-- Keymaps
 -- goes to the definition
 vim.keymap.set('n', '<leader>d', '<cmd>lua vim.lsp.buf.definition()<CR>')
 
--- show what the defintion of a method
+-- show what the definition of a method
 vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
 
 -- goes to the implementation

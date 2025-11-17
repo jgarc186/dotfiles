@@ -119,29 +119,18 @@ require("lazy").setup({
         end
     },
 
+    -- Improve syntax highlighting
     {
       'nvim-treesitter/nvim-treesitter',
       lazy = false,
-
       branch = 'main',
-      build = ':TSUpdate'
+      build = ':TSUpdate',
+      config = function()
+        require('nvim-treesitter').install({
+          'vue', 'javascript', 'typescript', 'html', 'css', 'lua', 'php', 'python'
+        })
+      end,
     },
-    -- Improive syntax highlighting
-    -- {
-    --   "nvim-treesitter/nvim-treesitter",
-    --   build = function()
-
-    --     require("nvim-treesitter.install").update({ with_sync = true })()
-    --   end,
-    --   dependencies = {
-    --     "JoosepAlviste/nvim-ts-context-commentstring",
-    --     "nvim-treesitter/nvim-treesitter-textobjects",
-    --   },
-    --   config = function()
-    --     require("user.plugins.treesitter")
-    --   end,
-    -- },
-
 
     -- Code folding
     {
