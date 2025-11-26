@@ -6,7 +6,7 @@
     "intelephense": "^1.14.4"
   },
   "devDependencies": {
-    "@vue/language-server": "^3.1.2",
+    "@vue/language-server": "^3.1.5",
     "typescript": "^5.9.3"
   }
 }

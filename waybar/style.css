@@ -1,7 +1,7 @@
 /* Catppuccin */
 * {
     font-family: "JetBrains Mono", monospace;
-    font-size: 13px;
+    font-size: 12px;
     /* color: transparent; */ 
     /*#cdd6f4; Text color */
 }
@@ -18,7 +18,7 @@ window#waybar {
     background: rgba(30, 30, 46, 0.9); /*linear-gradient(100deg, @grey0 0%, @bg1 100%);*/ 
     transition: all 0.3s ease-in-out;
     min-width: 0; 
-    margin: 5px 0; 
+    margin: 5px 15px; 
     padding: 10px 2px 2px 10px;
     border-radius: 3px;
 }
@@ -36,8 +36,7 @@ window#waybar {
 }
 
 .modules-left, .modules-right, .modules-center {
-    /* margin: 5px 5px 0 5px; */
-    padding: 2px 3px;
+    padding: 2px 5px;
     /* border-radius: 25px; */
     /* background: rgba(49, 50, 68, 0.8); */
     /* border: 2px solid #89b4fa; */

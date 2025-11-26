@@ -54,7 +54,7 @@ setup_lsp('vtsls', {
         globalPlugins = {
           {
             name = '@vue/typescript-plugin',
-            location = '~/developer/dotfiles/node_modules/@vue/typescript-plugin',
+            location = '/home/jose/developer/dotfiles/node_modules/@vue/typescript-plugin',
             languages = { 'vue' },
           },
         },
@@ -69,7 +69,7 @@ setup_lsp('vtsls', {
 setup_lsp('volar', {
   cmd = { 
     'node', 
-    '~/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js', 
+    '/home/jose/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js', 
     '--stdio' 
   },
   filetypes = { 'vue' },
@@ -78,7 +78,7 @@ setup_lsp('volar', {
       hybridMode = true,
     },
     typescript = {
-      tsdk = '~/developer/dotfiles/node_modules/typescript/lib'
+      tsdk = '/home/jose/developer/dotfiles/node_modules/typescript/lib'
     },
   },
 })
