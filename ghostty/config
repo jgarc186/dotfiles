@@ -1,12 +1,14 @@
-font-family = "Operator Mono"
-
+font-family = "Operator Mono Medium"
+font-style = italic
+font-feature = +calt,+liga,+dlig
+ 
 theme = catppuccin-mocha.conf
 background-blur-radius = 20
 mouse-hide-while-typing = true
 window-decoration = true
 # keybind = global:cmd+/=toggle_quick_terminal
 macos-option-as-alt = true
-background-opacity = 0.95
+background-opacity = 0.80
 # background-blur-radius = 20
 keybind = shift+enter=text:\n
 
