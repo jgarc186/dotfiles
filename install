@@ -41,6 +41,9 @@ touch $HOME/.hushlogin
 rm -rf $HOME/.config/nvim
 ln -s $DOTFILES/nvim $HOME/.config/nvim
 
+rm -rf $HOME/Pictures/wallpapers
+ln -s $DOTFILES/wallpapers $HOME/Pictures/wallpapers
+
 rm -rf $HOME/.warp
 ln -s $DOTFILES/warp $HOME/.warp
 
@@ -50,6 +53,4 @@ ln -s $DOTFILES/starship/starship.toml $HOME/.config/starship.toml
 mkdir -p $HOME/.local/bin
 
 rm -rf $HOME/.local/bin/t
-rm -rf $HOME/.local/bin/change_wallpaper
 ln -s $DOTFILES/scripts/t $HOME/.local/bin/t
-ln -s $DOTFILES/scripts/change_wallpaper $HOME/.local/bin/change_wallpaper
