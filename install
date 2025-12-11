@@ -20,9 +20,6 @@ ln -s $DOTFILES/waybar $HOME/.config/waybar
 rm -rf $HOME/.zshrc
 ln -s $DOTFILES/zshrc/zshrc.conf $HOME/.zshrc
 
-rm -rf $HOME/.vimrc
-ln -s $DOTFILES/vimrc/.vimrc $HOME/.vimrc
-
 rm -rf $HOME/.alacritty.toml
 ln -s $DOTFILES/alacritty/alacritty.toml $HOME/.alacritty.toml
 
