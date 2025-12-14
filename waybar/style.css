@@ -99,6 +99,7 @@
 /* Main bar modules */
 /* {{{ */
 #cava,
+#waybar.main #custom-launcher,
 #waybar.main #custom-headsetbattery,
 #waybar.main #custom-nvidia,
 #waybar.main #custom-weather,
@@ -126,6 +127,12 @@
 
 #waybar.main #custom-weather {
   padding-right: 3pt;
+}
+
+#waybar.main #custom-launcher {
+  color: @window;
+  font-size: 25px;
+  padding-right: 1pt;
 }
 
 #waybar.main #custom-nvidia {

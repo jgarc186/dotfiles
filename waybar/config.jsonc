@@ -13,7 +13,8 @@
     "margin-right": 24,
 
     "modules-left": [
-      "group/traym",
+      "custom/launcher",
+      // "group/traym",
       // "custom/spacer5",
       "hyprland/workspaces",
       // "custom/spacer2",
@@ -113,6 +114,12 @@
       "interval": 60,
       "exec": "wttrbar --nerd --location Charlotte --fahrenheit",
       "return-type": "json"
+    },
+    "custom/launcher": {
+          "format": "󰣇 ",
+        // "format": "",
+        "on-click": "rofi -show drun",
+        "tooltip": false
     },
 
     "group/traym": {
