@@ -25,12 +25,12 @@
 
     "modules-right": [
       "custom/spacer1",
-      "cpu",
-      "temperature",
-      "custom/nvidia",
+      // "cpu",
+      // "temperature",
+      // "custom/nvidia",
       // "group/storage",
       "memory#ram",
-      "memory#swap",
+      // "memory#swap",
       "disk",
       "network#info",
       "custom/spacer2",

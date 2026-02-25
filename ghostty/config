@@ -1,8 +1,9 @@
 font-family = "Operator Mono Medium"
 font-style = italic
 font-feature = +calt,+liga,+dlig
- 
-theme = catppuccin-mocha.conf
+
+theme = Matugen
+# theme = catppuccin-mocha.conf
 background-blur-radius = 20
 mouse-hide-while-typing = true
 window-decoration = true
@@ -16,3 +17,4 @@ keybind = shift+enter=text:\n
 #custom-shader=shaders/cursor_blaze.glsl
 #custom-shader=shaders/cursor_base_no_trail.glsl
 custom-shader = ./shaders/cursor_smear.glsl 
+

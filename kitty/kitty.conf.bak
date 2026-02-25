@@ -1,18 +1,15 @@
 # BEGIN_KITTY_THEME
-# Matugen
+# Catppuccin-Mocha
 include current-theme.conf
 # END_KITTY_THEME
-font_family      "Operator Mono" #JetBrainsMono Nerd Font
+font_family      operator_mono_medium #JetBrainsMono Nerd Font
 bold_font        auto
 italic_font      auto
 bold_italic_font auto
 
+
 font_size 18
 background_opacity 0.9
-
-cursor_trail 1
-# cursor_trail_start_threshold 0 
-cursor_trail_decay 0.01 0.15
 
 # modify_font cell_width 100%
 # modify_font cell_height 25px
@@ -27,9 +24,9 @@ cursor_trail_decay 0.01 0.15
 ## blurb:    Soothing pastel theme for the high-spirited!
 
 # text
-# foreground           #cdd6f4
+foreground           #cdd6f4
 # base
-# background           #1e1e2e
+background           #1e1e2e
 # subtext0
 title_fg             #a6adc8
 
