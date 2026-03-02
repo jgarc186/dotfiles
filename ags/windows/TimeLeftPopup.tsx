@@ -3,11 +3,13 @@ import { createBinding } from "ags"
 import { Astal } from "ags/gtk4"
 
 import Battery from "gi://AstalBattery"
+import Network from "gi://AstalNetwork"
 
 const { TOP, RIGHT } = Astal.WindowAnchor
 
 export default function TimeLeftPopup() {
     const battery = Battery.get_default() 
+    const network = Network.get_default()
     
     const timeToFull = createBinding(battery,"timeToFull")(timeToFull => {
         const baseTime = new Date(0)
@@ -30,6 +32,7 @@ export default function TimeLeftPopup() {
 
     const timeLeft = createBinding(battery,"timeToEmpty")(timeToEmpty => {
         const baseTime = new Date(0)
+        const activeConnection = network.wifi.ssid; 
         const { charging } = battery
         if (!charging && timeToEmpty === 0) {
             return 'Calculating time to empty...'
@@ -40,7 +43,10 @@ export default function TimeLeftPopup() {
         baseTime.setSeconds(seconds)
 
         const batteryTime = `${baseTime.getUTCHours()}h ${baseTime.getUTCMinutes()}m ${baseTime.getUTCSeconds()}s`
-        return `Time to empty: ${batteryTime}`
+        return `
+            Time to empty: ${batteryTime}\n 
+            Active Wifi connection: ${activeConnection}
+        `
     })
 
     return (
