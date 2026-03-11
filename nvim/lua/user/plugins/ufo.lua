@@ -6,9 +6,12 @@ vim.o.foldlevelstart = 99
 vim.o.foldenable = true
 
 ufo.setup({
-    -- Kaymaps
-    vim.keymap.set('n', '<leader>o', require('ufo').openAllFolds),
-    vim.keymap.set('n', '<leader>c', require('ufo').closeAllFolds)
+    provider_selector = function(bufnr, filetype, buftype)
+        return { 'treesitter', 'indent' }
+    end,
 })
+
+vim.keymap.set('n', '<leader>o', ufo.openAllFolds)
+vim.keymap.set('n', '<leader>c', ufo.closeAllFolds)
 
 

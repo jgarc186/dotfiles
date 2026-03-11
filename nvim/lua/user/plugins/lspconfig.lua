@@ -1,22 +1,12 @@
 -- Setup mason to automatically install LSP server
 require('mason').setup()
-require('mason-lspconfig').setup({ 
+require('mason-lspconfig').setup({
   automatic_installation = true,
-  handlers = {
-    function(server_name)
-      -- Skip servers we're configuring manually
-      if server_name == "vtsls" or server_name == "volar" then
-        return
-      end
-      
-      -- Use native API if available, fallback to lspconfig
-      if vim.fn.has('nvim-0.11') == 1 then
-        vim.lsp.config(server_name, {})
-      else
-        require('lspconfig')[server_name].setup({})
-      end
-    end,
-  }
+  -- mason-lspconfig automatically calls vim.lsp.enable() for installed servers.
+  -- Exclude vue_ls since we configure volar manually for hybrid mode.
+  automatic_enable = {
+    exclude = { 'vue_ls', 'vtsls' },
+  },
 })
 
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
@@ -62,17 +52,18 @@ setup_lsp('vtsls', {
     },
   },
   filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue' },
+  root_markers = { 'tsconfig.json', 'jsconfig.json', 'package.json', '.git' },
 })
 
 -- Volar handles Vue-specific features (components, templates, etc)
--- Note: vue_ls is deprecated, but keeping your setup with volar name
 setup_lsp('volar', {
-  cmd = { 
-    'node', 
-    '/home/jose/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js', 
-    '--stdio' 
+  cmd = {
+    'node',
+    '/home/jose/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js',
+    '--stdio'
   },
   filetypes = { 'vue' },
+  root_markers = { 'package.json', '.git' },
   init_options = {
     vue = {
       hybridMode = true,
@@ -84,10 +75,17 @@ setup_lsp('volar', {
 })
 
 -- Python language server
-setup_lsp('basedpyright', {})
+setup_lsp('basedpyright', {
+    cmd = { 'basedpyright-langserver', '--stdio' },
+    filetypes = { 'python' },
+    root_markers = { 'pyproject.toml', 'setup.py', 'pyrightconfig.json', '.git' },
+})
 
 -- JSON
 setup_lsp('jsonls', {
+    cmd = { 'vscode-json-language-server', '--stdio' },
+    filetypes = { 'json', 'jsonc' },
+    root_markers = { '.git' },
     settings = {
         json = {
             schemas = require('schemastore').json.schemas()
@@ -110,22 +108,22 @@ setup_lsp('omnisharp', {
     autostart = true,
 })
 
--- Enable LSP on appropriate filetypes for Neovim 0.11+
-if vim.fn.has('nvim-0.11') == 1 then
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = '*',
-    callback = function(args)
-      vim.lsp.enable({
-        'intelephense',
-        'vtsls', 
-        'volar',
-        'basedpyright',
-        'jsonls',
-        'omnisharp',
-      }, args.buf)
-    end,
-  })
-end
+
+-- Manually enable servers excluded from mason-lspconfig's automatic_enable
+vim.lsp.enable('vtsls')
+
+-- Stop LSP servers when their last attached buffer is closed
+vim.api.nvim_create_autocmd('LspDetach', {
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if not client then return end
+    vim.schedule(function()
+      if vim.tbl_isempty(client.attached_buffers) then
+        client:stop()
+      end
+    end)
+  end,
+})
 
 -- Keymaps
 -- goes to the definition

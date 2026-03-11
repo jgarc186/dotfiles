@@ -42,7 +42,7 @@ require("lazy").setup({
             -- Make the cursor line invisible
             vim.api.nvim_set_hl(0, 'CursorLinmeBg', {
                 fg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
-                bg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
+               bg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
             })
             
             vim.api.nvim_set_hl(0, 'StatusLineNonText', {
@@ -53,9 +53,6 @@ require("lazy").setup({
             vim.api.nvim_set_hl(0, 'NvimTreeIndentMarker', { fg = '#30323E' })
         end,
     },
-
-    -- Github Copilot
-    'github/copilot.vim',
 
     -- Commenting support
     'tpope/vim-commentary',
@@ -155,12 +152,6 @@ require("lazy").setup({
         config = function()
             require('user/plugins/lspconfig')
         end
-    },
-
-    -- Improve support for Vue
-    { 
-        'neoclide/coc.nvim', 
-        branch = 'release', 
     },
 
     -- Formatter
