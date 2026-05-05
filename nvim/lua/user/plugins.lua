@@ -124,7 +124,22 @@ require("lazy").setup({
       build = ':TSUpdate',
       config = function()
         require('nvim-treesitter').install({
-          'vue', 'javascript', 'typescript', 'html', 'css', 'lua', 'php', 'python'
+          'vue', 'javascript', 'typescript', 'html', 'css', 'lua', 'php', 'python', 'blade'
+        })
+
+        -- Make sure .blade.php files are detected as 'blade' filetype
+        vim.filetype.add({
+          pattern = {
+            ['.*%.blade%.php'] = 'blade',
+          },
+        })
+
+        -- Enable treesitter highlighting when these filetypes open
+        vim.api.nvim_create_autocmd('FileType', {
+          pattern = { 'vue', 'javascript', 'typescript', 'html', 'css', 'lua', 'php', 'python', 'blade' },
+          callback = function()
+            vim.treesitter.start()
+          end,
         })
       end,
     },
@@ -187,6 +202,17 @@ require("lazy").setup({
         'MeanderingProgrammer/render-markdown.nvim',
         dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
         opts = {},
+    },
+
+    {
+        'ricardoramirezr/blade-nav.nvim',
+        dependencies = {
+            'hrsh7th/nvim-cmp', -- you're using nvim-cmp
+        },
+        ft = { 'blade' },
+        opts = {
+            close_tag_on_complete = true,
+        },
     }
 })
 

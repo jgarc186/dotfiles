@@ -9,6 +9,7 @@ require('mason-lspconfig').setup({
   },
 })
 
+local home = vim.fn.expand('~')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
 capabilities.textDocument.foldingRange = {
@@ -44,7 +45,7 @@ setup_lsp('vtsls', {
         globalPlugins = {
           {
             name = '@vue/typescript-plugin',
-            location = '/home/jose/developer/dotfiles/node_modules/@vue/typescript-plugin',
+            location = home .. '/developer/dotfiles/node_modules/@vue/typescript-plugin',
             languages = { 'vue' },
           },
         },
@@ -59,7 +60,7 @@ setup_lsp('vtsls', {
 setup_lsp('volar', {
   cmd = {
     'node',
-    '/home/jose/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js',
+    home .. '/developer/dotfiles/node_modules/@vue/language-server/bin/vue-language-server.js',
     '--stdio'
   },
   filetypes = { 'vue' },
@@ -69,7 +70,7 @@ setup_lsp('volar', {
       hybridMode = true,
     },
     typescript = {
-      tsdk = '/home/jose/developer/dotfiles/node_modules/typescript/lib'
+      tsdk = home .. '/developer/dotfiles/node_modules/typescript/lib'
     },
   },
 })
@@ -96,7 +97,7 @@ setup_lsp('jsonls', {
 -- C# language server
 setup_lsp('omnisharp', {
     cmd = {
-        '/home/jose/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
+        home .. '/developer/dotfiles/omnisharp/omnisharp/OmniSharp.exe',
         '--languageserver',
         '--hostPID',
         tostring(vim.fn.getpid()),
