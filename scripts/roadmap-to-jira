@@ -13,7 +13,8 @@
 #   roadmap-to-jira [--repo <path>]
 #
 # Reads ROAD_MAP.md from the repo root, uses Claude Opus to generate an Epic
-# and Stories as JSON, writes them to tickets/, pushes to Jira, then cleans up.
+# and Stories as JSON, writes debug artifacts to tickets/, pushes to Jira,
+# then cleans up on success.
 
 import argparse
 import json
@@ -22,10 +23,12 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 import yaml
 from atlassian import Jira
+from requests.exceptions import HTTPError
 
 # customfield_10011 is the Epic Name field on most Jira Cloud instances.
 # To find yours: Jira Settings → Issues → Custom fields → search "Epic Name"
@@ -34,6 +37,10 @@ EPIC_NAME_FIELD = "customfield_10011"
 
 # customfield_10014 is the Epic Link field used by classic (company-managed) projects.
 EPIC_LINK_FIELD = "customfield_10014"
+
+MAX_DESCRIPTION_BYTES = 32_000
+CLAUDE_TIMEOUT = 300   # seconds
+JIRA_TIMEOUT = 30      # seconds
 
 CLAUDE_PROMPT = """You are a Jira backlog generator. Read the roadmap below and output ONLY a single JSON object — no prose before or after it, no markdown fences, just raw JSON.
 
@@ -88,50 +95,82 @@ def find_roadmap(repo: Path) -> Path:
     return roadmap
 
 
-def _extract_json_object(text: str) -> str | None:
-    """Return the first balanced {...} block in text, or None."""
-    start = text.find("{")
+def _parse_json_output(text: str) -> dict | None:
+    """Parse the first JSON object from Claude output, tolerating surrounding prose.
+
+    Uses json.JSONDecoder.raw_decode so braces inside string values don't confuse
+    the extractor and trailing text after the closing brace is ignored.
+    """
+    stripped = text.strip()
+    try:
+        result = json.loads(stripped)
+        if isinstance(result, dict):
+            return result
+    except json.JSONDecodeError:
+        pass
+    start = stripped.find("{")
     if start == -1:
         return None
-    depth = 0
-    for i, ch in enumerate(text[start:], start):
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return text[start : i + 1]
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(stripped, start)
+        if isinstance(obj, dict):
+            return obj
+    except json.JSONDecodeError:
+        pass
     return None
 
 
-def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
+def _make_slug(title: str) -> str:
+    """Return an ASCII-safe, path-safe slug; never empty."""
+    normalized = unicodedata.normalize("NFKD", title).encode("ascii", errors="ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")[:40]
+    return slug or "untitled"
+
+
+def _truncate(text: str, label: str) -> str:
+    encoded = text.encode()
+    if len(encoded) <= MAX_DESCRIPTION_BYTES:
+        return text
+    print(f"Warning: {label} description truncated to {MAX_DESCRIPTION_BYTES} bytes", file=sys.stderr)
+    return encoded[:MAX_DESCRIPTION_BYTES].decode(errors="ignore")
+
+
+def generate_tickets(roadmap_path: Path, repo: Path) -> tuple[dict, list[dict]]:
     if not shutil.which("claude"):
         print("Error: 'claude' CLI not found on PATH — install Claude Code first", file=sys.stderr)
         sys.exit(4)
 
-    roadmap_text = roadmap_path.read_text()
+    tickets_dir = repo / "tickets"
+    if tickets_dir.exists():
+        print(
+            f"Error: {tickets_dir} already exists from a prior partial run.\n"
+            "Inspect it and remove it before re-running.",
+            file=sys.stderr,
+        )
+        sys.exit(4)
+
     print("Generating tickets via Claude Opus…")
-    result = subprocess.run(
-        ["claude", "-p", "--model", "claude-opus-4-7"],
-        input=CLAUDE_PROMPT + roadmap_text,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["claude", "-p", "--model", "claude-opus-4-7"],
+            input=CLAUDE_PROMPT + roadmap_path.read_text(),
+            capture_output=True,
+            text=True,
+            timeout=CLAUDE_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"Error: claude timed out after {CLAUDE_TIMEOUT}s", file=sys.stderr)
+        sys.exit(4)
+
     if result.returncode != 0:
         print(f"Error: claude exited {result.returncode}", file=sys.stderr)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
         sys.exit(4)
 
-    raw_json = _extract_json_object(result.stdout)
-    if not raw_json:
-        print("Error: claude output contained no JSON object", file=sys.stderr)
-        sys.exit(4)
-
-    try:
-        data = json.loads(raw_json)
-    except json.JSONDecodeError as e:
-        print(f"Error: failed to parse JSON from claude output: {e}", file=sys.stderr)
+    data = _parse_json_output(result.stdout)
+    if data is None:
+        print("Error: claude output contained no parseable JSON object", file=sys.stderr)
         sys.exit(4)
 
     epic = data.get("epic")
@@ -147,58 +186,53 @@ def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
             print(f"Error: story {i} missing title or description", file=sys.stderr)
             sys.exit(4)
 
-    tickets_dir = repo / "tickets"
-    tickets_dir.mkdir(exist_ok=True)
+    epic["description"] = _truncate(epic["description"], "Epic")
+    for story in stories:
+        story["description"] = _truncate(story["description"], f"story '{story['title']}'")
 
+    # Write debug artifacts. These are not re-read; push_to_jira uses the in-memory dicts.
+    tickets_dir.mkdir()
     fm = yaml.dump({"title": epic["title"], "type": "Epic"}, default_flow_style=False).strip()
     (tickets_dir / "epic.md").write_text(f"---\n{fm}\n---\n\n{epic['description']}\n")
-
     for i, story in enumerate(stories, start=1):
-        # Sanitize: lowercase alphanum+hyphen only, then strip leading/trailing hyphens.
-        # Path traversal is impossible because the character whitelist excludes '/'.
-        slug = re.sub(r"[^a-z0-9]+", "-", story["title"].lower()).strip("-")[:40]
         fm = yaml.dump({"title": story["title"], "type": "Story"}, default_flow_style=False).strip()
-        (tickets_dir / f"story-{i:02d}-{slug}.md").write_text(
+        (tickets_dir / f"story-{i:02d}-{_make_slug(story['title'])}.md").write_text(
             f"---\n{fm}\n---\n\n{story['description']}\n"
         )
-
     print(f"Wrote {1 + len(stories)} ticket files to {tickets_dir}")
-    return tickets_dir
+
+    return epic, stories
 
 
-def load_tickets(tickets_dir: Path) -> tuple[dict, list[dict]]:
-    def parse(path: Path) -> dict:
-        text = path.read_text()
-        parts = re.split(r"^---\s*$", text, maxsplit=2, flags=re.MULTILINE)
-        if len(parts) < 3:
-            print(f"Error: malformed frontmatter in {path}", file=sys.stderr)
-            sys.exit(4)
-        fm = yaml.safe_load(parts[1])
-        if not isinstance(fm, dict):
-            print(f"Error: empty or invalid frontmatter in {path}", file=sys.stderr)
-            sys.exit(4)
-        fm["description"] = parts[2].strip()
-        return fm
-
-    epic_path = tickets_dir / "epic.md"
-    if not epic_path.exists():
-        print("Error: tickets/epic.md not found", file=sys.stderr)
-        sys.exit(4)
-
-    story_paths = sorted(tickets_dir.glob("story-*.md"))
-    if not story_paths:
-        print("Error: no story-*.md files found in tickets/", file=sys.stderr)
-        sys.exit(4)
-
-    return parse(epic_path), [parse(p) for p in story_paths]
+def _create_story(jira: Jira, project: str, epic_key: str, story: dict) -> dict:
+    fields = {
+        "project": {"key": project},
+        "issuetype": {"name": "Story"},
+        "summary": story["title"],
+        "description": story["description"],
+        "parent": {"key": epic_key},
+    }
+    try:
+        return jira.issue_create(fields=fields)
+    except HTTPError as e:
+        # Fall back to Epic Link only for HTTP 400 (field validation failure on
+        # classic/company-managed projects that don't support the parent field).
+        if e.response is None or e.response.status_code != 400:
+            raise
+        fields.pop("parent")
+        fields[EPIC_LINK_FIELD] = epic_key
+        return jira.issue_create(fields=fields)
 
 
-def push_to_jira(config: dict, epic: dict, stories: list[dict]) -> tuple[str, list[str]]:
+def push_to_jira(
+    config: dict, epic: dict, stories: list[dict]
+) -> tuple[str, list[tuple[str, str]]]:
     jira = Jira(
         url=config["JIRA_URL"],
         username=config["JIRA_EMAIL"],
         password=config["JIRA_API_TOKEN"],
         cloud=True,
+        timeout=JIRA_TIMEOUT,
     )
     project = config["JIRA_PROJECT_KEY"]
 
@@ -223,10 +257,13 @@ def push_to_jira(config: dict, epic: dict, stories: list[dict]) -> tuple[str, li
         print(f"Error: failed to create Epic: {e}{hint}", file=sys.stderr)
         sys.exit(5)
 
-    epic_key = epic_issue["key"]
+    epic_key = epic_issue.get("key") if isinstance(epic_issue, dict) else None
+    if not epic_key:
+        print(f"Error: unexpected Jira response for Epic: {epic_issue}", file=sys.stderr)
+        sys.exit(5)
     print(f"  → {epic_key}")
 
-    story_keys: list[str] = []
+    created: list[tuple[str, str]] = []  # (story_title, jira_key)
     for story in stories:
         print(f"Creating Story: {story['title']}")
         try:
@@ -234,35 +271,20 @@ def push_to_jira(config: dict, epic: dict, stories: list[dict]) -> tuple[str, li
         except Exception as e:
             print(f"Error: Jira API failed creating story '{story['title']}': {e}", file=sys.stderr)
             print(f"  Epic created: {epic_key}", file=sys.stderr)
-            if story_keys:
-                print(f"  Stories already created: {', '.join(story_keys)}", file=sys.stderr)
+            if created:
+                print("  Stories already created (roll back manually):", file=sys.stderr)
+                for title, key in created:
+                    print(f"    {key}  {title}", file=sys.stderr)
             sys.exit(5)
-        key = story_issue["key"]
-        story_keys.append(key)
+
+        key = story_issue.get("key") if isinstance(story_issue, dict) else None
+        if not key:
+            print(f"Error: unexpected Jira response for Story: {story_issue}", file=sys.stderr)
+            sys.exit(5)
+        created.append((story["title"], key))
         print(f"  → {key}")
 
-    return epic_key, story_keys
-
-
-def _create_story(jira: Jira, project: str, epic_key: str, story: dict) -> dict:
-    fields = {
-        "project": {"key": project},
-        "issuetype": {"name": "Story"},
-        "summary": story["title"],
-        "description": story["description"],
-        "parent": {"key": epic_key},
-    }
-    try:
-        return jira.issue_create(fields=fields)
-    except Exception as e:
-        # Only fall back to Epic Link (classic projects) if the error is about
-        # the 'parent' field being unsupported. Re-raise for auth/network errors.
-        msg = str(e).lower()
-        if "parent" not in msg and "field" not in msg:
-            raise
-        fields.pop("parent")
-        fields[EPIC_LINK_FIELD] = epic_key
-        return jira.issue_create(fields=fields)
+    return epic_key, created
 
 
 def main() -> None:
@@ -271,11 +293,11 @@ def main() -> None:
 
     config = load_config()
     roadmap_path = find_roadmap(repo)
-    tickets_dir = generate_tickets(roadmap_path, repo)
-    epic, stories = load_tickets(tickets_dir)
-    epic_key, story_keys = push_to_jira(config, epic, stories)
-    shutil.rmtree(tickets_dir)
+    epic, stories = generate_tickets(roadmap_path, repo)
+    epic_key, created = push_to_jira(config, epic, stories)
+    shutil.rmtree(repo / "tickets")
 
+    story_keys = [key for _, key in created]
     story_range = f"{story_keys[0]}..{story_keys[-1]}" if len(story_keys) > 1 else story_keys[0]
     print(f"\nDone. Created {epic_key} with {len(story_keys)} stories: {story_range}")
 
