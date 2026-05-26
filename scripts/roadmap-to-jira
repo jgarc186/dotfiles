@@ -224,12 +224,7 @@ def _create_epic(jira: Jira, project: str, epic: dict) -> dict:
         # a 400 for bad project key, permissions, etc. should not trigger a retry.
         body = (e.response.text or "").lower()
         if "10011" not in body and "epic name" not in body:
-            hint = (
-                f"\nHint: Jira rejected the Epic Name field ({EPIC_NAME_FIELD})."
-                "\nFind the correct ID: Jira Settings → Issues → Custom fields → 'Epic Name' → note URL field ID."
-                "\nThen update EPIC_NAME_FIELD at the top of this script."
-            )
-            print(f"Error: failed to create Epic: {e}{hint}", file=sys.stderr)
+            print(f"Error: failed to create Epic: {e}", file=sys.stderr)
             sys.exit(5)
         fields.pop(EPIC_NAME_FIELD)
         try:
@@ -279,7 +274,10 @@ def push_to_jira(
 
     epic_key = epic_issue.get("key") if isinstance(epic_issue, dict) else None
     if not epic_key:
-        print(f"Error: unexpected Jira response for Epic: {epic_issue}", file=sys.stderr)
+        print(
+            f"Error: unexpected Jira response for Epic (Epic may have been created — check Jira): {epic_issue}",
+            file=sys.stderr,
+        )
         sys.exit(5)
     print(f"  → {epic_key}")
 
