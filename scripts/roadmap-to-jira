@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/jose/.local/share/roadmap-to-jira-venv/bin/python
 # Requires: atlassian-python-api, PyYAML
 #   pacman -S python-atlassian-python-api python-yaml
 #   or: pipx install atlassian-python-api && pip install pyyaml
