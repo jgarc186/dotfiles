@@ -17,6 +17,7 @@
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -30,6 +31,9 @@ from atlassian import Jira
 # To find yours: Jira Settings → Issues → Custom fields → search "Epic Name"
 # and note the field ID in the URL.
 EPIC_NAME_FIELD = "customfield_10011"
+
+# customfield_10014 is the Epic Link field used by classic (company-managed) projects.
+EPIC_LINK_FIELD = "customfield_10014"
 
 CLAUDE_PROMPT = """You are a Jira backlog generator. Read the roadmap below and output ONLY a single JSON object — no prose before or after it, no markdown fences, just raw JSON.
 
@@ -54,20 +58,23 @@ Roadmap:
 """
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Convert ROAD_MAP.md to Jira Epic + Stories")
     p.add_argument("--repo", default=None, help="Path to git repo root (default: cwd)")
     return p.parse_args()
 
 
-def load_config():
+def load_config() -> dict:
     required = ["JIRA_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "JIRA_PROJECT_KEY"]
-    import os
     missing = [v for v in required if not os.environ.get(v)]
     if missing:
         print(f"Error: missing required env vars: {', '.join(missing)}", file=sys.stderr)
         sys.exit(2)
-    return {v: os.environ[v] for v in required}
+    config = {v: os.environ[v] for v in required}
+    if not config["JIRA_URL"].startswith("https://"):
+        print("Error: JIRA_URL must start with https://", file=sys.stderr)
+        sys.exit(2)
+    return config
 
 
 def find_roadmap(repo: Path) -> Path:
@@ -81,14 +88,32 @@ def find_roadmap(repo: Path) -> Path:
     return roadmap
 
 
-def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
-    roadmap_text = roadmap_path.read_text()
-    prompt = CLAUDE_PROMPT + roadmap_text
+def _extract_json_object(text: str) -> str | None:
+    """Return the first balanced {...} block in text, or None."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    for i, ch in enumerate(text[start:], start):
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
 
+
+def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
+    if not shutil.which("claude"):
+        print("Error: 'claude' CLI not found on PATH — install Claude Code first", file=sys.stderr)
+        sys.exit(4)
+
+    roadmap_text = roadmap_path.read_text()
     print("Generating tickets via Claude Opus…")
     result = subprocess.run(
         ["claude", "-p", "--model", "claude-opus-4-7"],
-        input=prompt,
+        input=CLAUDE_PROMPT + roadmap_text,
         capture_output=True,
         text=True,
     )
@@ -98,23 +123,20 @@ def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
             print(result.stderr, file=sys.stderr)
         sys.exit(4)
 
-    raw = result.stdout.strip()
-
-    # Extract outermost {...} block to tolerate any stray wrapping text
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not match:
+    raw_json = _extract_json_object(result.stdout)
+    if not raw_json:
         print("Error: claude output contained no JSON object", file=sys.stderr)
         sys.exit(4)
 
     try:
-        data = json.loads(match.group())
+        data = json.loads(raw_json)
     except json.JSONDecodeError as e:
         print(f"Error: failed to parse JSON from claude output: {e}", file=sys.stderr)
         sys.exit(4)
 
     epic = data.get("epic")
     stories = data.get("stories", [])
-    if not epic or not isinstance(epic, dict) or not epic.get("title") or not epic.get("description"):
+    if not isinstance(epic, dict) or not epic.get("title") or not epic.get("description"):
         print("Error: JSON missing valid 'epic' with title and description", file=sys.stderr)
         sys.exit(4)
     if not stories or not isinstance(stories, list):
@@ -128,33 +150,33 @@ def generate_tickets(roadmap_path: Path, repo: Path) -> Path:
     tickets_dir = repo / "tickets"
     tickets_dir.mkdir(exist_ok=True)
 
-    # Write epic
-    _write_ticket(tickets_dir / "epic.md", {"title": epic["title"], "type": "Epic"}, epic["description"])
+    fm = yaml.dump({"title": epic["title"], "type": "Epic"}, default_flow_style=False).strip()
+    (tickets_dir / "epic.md").write_text(f"---\n{fm}\n---\n\n{epic['description']}\n")
 
-    # Write stories
     for i, story in enumerate(stories, start=1):
+        # Sanitize: lowercase alphanum+hyphen only, then strip leading/trailing hyphens.
+        # Path traversal is impossible because the character whitelist excludes '/'.
         slug = re.sub(r"[^a-z0-9]+", "-", story["title"].lower()).strip("-")[:40]
-        filename = f"story-{i:02d}-{slug}.md"
-        _write_ticket(tickets_dir / filename, {"title": story["title"], "type": "Story"}, story["description"])
+        fm = yaml.dump({"title": story["title"], "type": "Story"}, default_flow_style=False).strip()
+        (tickets_dir / f"story-{i:02d}-{slug}.md").write_text(
+            f"---\n{fm}\n---\n\n{story['description']}\n"
+        )
 
     print(f"Wrote {1 + len(stories)} ticket files to {tickets_dir}")
     return tickets_dir
 
 
-def _write_ticket(path: Path, frontmatter: dict, body: str):
-    fm_text = yaml.dump(frontmatter, default_flow_style=False).strip()
-    path.write_text(f"---\n{fm_text}\n---\n\n{body}\n")
-
-
 def load_tickets(tickets_dir: Path) -> tuple[dict, list[dict]]:
     def parse(path: Path) -> dict:
         text = path.read_text()
-        # Split on the closing --- of the frontmatter
         parts = re.split(r"^---\s*$", text, maxsplit=2, flags=re.MULTILINE)
         if len(parts) < 3:
             print(f"Error: malformed frontmatter in {path}", file=sys.stderr)
             sys.exit(4)
         fm = yaml.safe_load(parts[1])
+        if not isinstance(fm, dict):
+            print(f"Error: empty or invalid frontmatter in {path}", file=sys.stderr)
+            sys.exit(4)
         fm["description"] = parts[2].strip()
         return fm
 
@@ -190,22 +212,30 @@ def push_to_jira(config: dict, epic: dict, stories: list[dict]) -> tuple[str, li
             EPIC_NAME_FIELD: epic["title"],
         })
     except Exception as e:
-        _handle_epic_name_field_error(e)
-        raise
+        msg = str(e)
+        hint = ""
+        if "10011" in msg or "epic name" in msg.lower():
+            hint = (
+                f"\nHint: Jira rejected the Epic Name field ({EPIC_NAME_FIELD})."
+                "\nFind the correct ID: Jira Settings → Issues → Custom fields → 'Epic Name' → note URL field ID."
+                "\nThen update EPIC_NAME_FIELD at the top of this script."
+            )
+        print(f"Error: failed to create Epic: {e}{hint}", file=sys.stderr)
+        sys.exit(5)
 
     epic_key = epic_issue["key"]
     print(f"  → {epic_key}")
 
-    story_keys = []
+    story_keys: list[str] = []
     for story in stories:
         print(f"Creating Story: {story['title']}")
         try:
             story_issue = _create_story(jira, project, epic_key, story)
         except Exception as e:
             print(f"Error: Jira API failed creating story '{story['title']}': {e}", file=sys.stderr)
-            if story_keys:
-                print(f"  Already created: {', '.join(story_keys)}", file=sys.stderr)
             print(f"  Epic created: {epic_key}", file=sys.stderr)
+            if story_keys:
+                print(f"  Stories already created: {', '.join(story_keys)}", file=sys.stderr)
             sys.exit(5)
         key = story_issue["key"]
         story_keys.append(key)
@@ -224,31 +254,18 @@ def _create_story(jira: Jira, project: str, epic_key: str, story: dict) -> dict:
     }
     try:
         return jira.issue_create(fields=fields)
-    except Exception:
-        # Fallback for classic projects that use Epic Link instead of parent
+    except Exception as e:
+        # Only fall back to Epic Link (classic projects) if the error is about
+        # the 'parent' field being unsupported. Re-raise for auth/network errors.
+        msg = str(e).lower()
+        if "parent" not in msg and "field" not in msg:
+            raise
         fields.pop("parent")
-        fields["customfield_10014"] = epic_key  # Epic Link field on classic projects
+        fields[EPIC_LINK_FIELD] = epic_key
         return jira.issue_create(fields=fields)
 
 
-def _handle_epic_name_field_error(e: Exception):
-    msg = str(e)
-    if "10011" in msg or "Epic Name" in msg.lower():
-        print(
-            f"Error: Jira rejected the Epic Name custom field ({EPIC_NAME_FIELD}).\n"
-            "To find the correct field ID for your instance:\n"
-            "  Jira Settings → Issues → Custom fields → search 'Epic Name' → note the ID in the URL\n"
-            f"Then update EPIC_NAME_FIELD at the top of this script.",
-            file=sys.stderr,
-        )
-
-
-def cleanup(tickets_dir: Path):
-    shutil.rmtree(tickets_dir)
-    print(f"Cleaned up {tickets_dir}")
-
-
-def main():
+def main() -> None:
     args = parse_args()
     repo = Path(args.repo).resolve() if args.repo else Path.cwd()
 
@@ -257,7 +274,7 @@ def main():
     tickets_dir = generate_tickets(roadmap_path, repo)
     epic, stories = load_tickets(tickets_dir)
     epic_key, story_keys = push_to_jira(config, epic, stories)
-    cleanup(tickets_dir)
+    shutil.rmtree(tickets_dir)
 
     story_range = f"{story_keys[0]}..{story_keys[-1]}" if len(story_keys) > 1 else story_keys[0]
     print(f"\nDone. Created {epic_key} with {len(story_keys)} stories: {story_range}")
