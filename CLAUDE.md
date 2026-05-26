@@ -45,7 +45,7 @@ Each top-level directory maps to one tool:
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
 - `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`)
 - `matugen/` — Theme generator config and templates
-- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`)
+- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
 - `starship/starship.toml` — Shell prompt (Catppuccin Mocha palette)
 

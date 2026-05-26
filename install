@@ -57,3 +57,6 @@ mkdir -p $HOME/.local/bin
 
 rm -rf $HOME/.local/bin/t
 ln -s $DOTFILES/scripts/t $HOME/.local/bin/t
+
+rm -rf $HOME/.local/bin/roadmap-to-jira
+ln -s $DOTFILES/scripts/roadmap-to-jira $HOME/.local/bin/roadmap-to-jira
