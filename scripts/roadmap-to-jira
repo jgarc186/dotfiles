@@ -214,11 +214,12 @@ def _create_epic(jira: Jira, project: str, epic: dict) -> dict:
         "description": epic["description"],
         EPIC_NAME_FIELD: epic["title"],
     }
+    _ORPHAN = " (Epic may have been created — check Jira before re-running)"
     try:
         return jira.issue_create(fields=fields)
     except HTTPError as e:
         if e.response is None or e.response.status_code != 400:
-            print(f"Error: failed to create Epic: {e}", file=sys.stderr)
+            print(f"Error: failed to create Epic: {e}{_ORPHAN}", file=sys.stderr)
             sys.exit(5)
         # Only retry without EPIC_NAME_FIELD if the error body mentions the field —
         # a 400 for bad project key, permissions, etc. should not trigger a retry.
@@ -230,10 +231,10 @@ def _create_epic(jira: Jira, project: str, epic: dict) -> dict:
         try:
             return jira.issue_create(fields=fields)
         except Exception as e2:
-            print(f"Error: failed to create Epic (original: {e}; retry: {e2})", file=sys.stderr)
+            print(f"Error: failed to create Epic (original: {e}; retry: {e2}){_ORPHAN}", file=sys.stderr)
             sys.exit(5)
     except Exception as e:
-        print(f"Error: failed to create Epic: {e}", file=sys.stderr)
+        print(f"Error: failed to create Epic: {e}{_ORPHAN}", file=sys.stderr)
         sys.exit(5)
 
 
