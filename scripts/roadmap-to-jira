@@ -205,6 +205,8 @@ def generate_tickets(roadmap_path: Path, repo: Path) -> tuple[dict, list[dict]]:
 
 
 def _create_epic(jira: Jira, project: str, epic: dict) -> dict:
+    # Exits internally on failure — Epic has nothing to roll back, so there is
+    # no need to bubble up for the caller to format a rollback message.
     fields = {
         "project": {"key": project},
         "issuetype": {"name": "Epic"},
@@ -213,30 +215,31 @@ def _create_epic(jira: Jira, project: str, epic: dict) -> dict:
         EPIC_NAME_FIELD: epic["title"],
     }
     try:
-        issue = jira.issue_create(fields=fields)
+        return jira.issue_create(fields=fields)
     except HTTPError as e:
-        # Classic projects may reject EPIC_NAME_FIELD with 400; retry without it.
         if e.response is None or e.response.status_code != 400:
             print(f"Error: failed to create Epic: {e}", file=sys.stderr)
             sys.exit(5)
-        fields.pop(EPIC_NAME_FIELD)
-        try:
-            issue = jira.issue_create(fields=fields)
-        except Exception as e2:
-            print(f"Error: failed to create Epic: {e2}", file=sys.stderr)
-            sys.exit(5)
-    except Exception as e:
-        msg = str(e)
-        hint = ""
-        if "10011" in msg or "epic name" in msg.lower():
+        # Only retry without EPIC_NAME_FIELD if the error body mentions the field —
+        # a 400 for bad project key, permissions, etc. should not trigger a retry.
+        body = (e.response.text or "").lower()
+        if "10011" not in body and "epic name" not in body:
             hint = (
                 f"\nHint: Jira rejected the Epic Name field ({EPIC_NAME_FIELD})."
                 "\nFind the correct ID: Jira Settings → Issues → Custom fields → 'Epic Name' → note URL field ID."
                 "\nThen update EPIC_NAME_FIELD at the top of this script."
             )
-        print(f"Error: failed to create Epic: {e}{hint}", file=sys.stderr)
+            print(f"Error: failed to create Epic: {e}{hint}", file=sys.stderr)
+            sys.exit(5)
+        fields.pop(EPIC_NAME_FIELD)
+        try:
+            return jira.issue_create(fields=fields)
+        except Exception as e2:
+            print(f"Error: failed to create Epic (original: {e}; retry: {e2})", file=sys.stderr)
+            sys.exit(5)
+    except Exception as e:
+        print(f"Error: failed to create Epic: {e}", file=sys.stderr)
         sys.exit(5)
-    return issue
 
 
 def _create_story(jira: Jira, project: str, epic_key: str, story: dict) -> dict:
@@ -285,7 +288,9 @@ def push_to_jira(
         print(f"Creating Story: {story['title']}")
         try:
             story_issue = _create_story(jira, project, epic_key, story)
-        except HTTPError as e:
+        except Exception as e:
+            # Broad catch is intentional: this is the user-facing rollback boundary and
+            # must print partial-failure context for ConnectionError, Timeout, etc. too.
             print(f"Error: Jira API failed creating story '{story['title']}': {e}", file=sys.stderr)
             print(f"  Epic created: {epic_key}", file=sys.stderr)
             if created:
