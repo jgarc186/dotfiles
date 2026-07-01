@@ -42,3 +42,11 @@ vim.opt.signcolumn = 'yes:1'
 vim.opt.undofile = true
 vim.opt.backup = true
 vim.opt.backupdir:remove('.')
+
+-- Disabled due to a tmux 3.7a bug: tmux doesn't reliably flush Nvim's
+-- synchronized-output (DECSET 2026) requests, causing panes to render
+-- stale/dark until an external repaint (e.g. switching panes) forces
+-- a full redraw. Re-evaluate if/when tmux ships a fix.
+-- https://github.com/tmux/tmux/pull/4744
+vim.opt.termsync = false
+

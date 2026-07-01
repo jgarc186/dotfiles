@@ -1,6 +1,8 @@
 require('user/plugins')
 require('user/options')
 
+vim.o.termsync = false
+
 -- Auto format on save
 vim.api.nvim_create_autocmd("BufWritePre", {
     pattern = { "*.cs", "*.js", "*.ts", "*.jsx", "*.tsx", "*.vue", "*.json", "*.php" },
