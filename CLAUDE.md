@@ -37,7 +37,7 @@ This reads `matugen/config.toml` and writes generated color files to:
 ### Configuration Structure
 
 Each top-level directory maps to one tool:
-- `hypr/` — Hyprland WM; modular config split across `hypr/modules/` (binds, monitors, autostart, animations, input, workspaces, etc.)
+- `hypr/` — Hyprland WM; entry point `hypr/hyprland.lua` (Hyprland 0.55+ Lua config, `hl.*` API), modular config split across `hypr/modules/*.lua` (binds, monitors, autostart, animations, input, workspaces, etc.). Legacy `hyprland.conf` + `modules/*.conf` kept as a backup — Hyprland ignores them once `hyprland.lua` exists.
 - `nvim/` — Neovim; entry point `init.lua`, plugins via Lazy.nvim, per-plugin configs in `lua/user/plugins/`
 - `waybar/` — Status bar; layout in `config.jsonc`, styling in `style.css`
 - `ags/` — TypeScript/TSX custom bar (in development, replacing waybar); entry `app.tsx`
@@ -61,11 +61,22 @@ The `ags/` directory is a TypeScript project with `node_modules/` and GObject In
 
 TPM and Catppuccin are git submodules under `tmux/plugins/`. To install plugins: `<prefix>I` inside tmux.
 
+### Hyprland Lua Config + Tests
+
+`hypr/hyprland.lua` is a sequence of `require("modules.xxx")` calls, in the same order `hyprland.conf` used to `source` its modules. Each `hypr/modules/*.lua` sits next to its old `.conf` counterpart and should stay a faithful translation of it (same binds, same values) unless a change is intentional.
+
+`hypr/tests/` is a TDD harness for this config, since there's no local Hyprland/Wayland to run it against:
+- `hypr/tests/support/mock_hl.lua` — fake `hl` global that records every call a module makes.
+- `hypr/tests/test_<module>.lua` — one per module, asserts the exact calls it should make.
+- Run: `luajit hypr/tests/run_tests.lua` (requires `luajit`, e.g. `brew install luajit`).
+
+When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), then the module (green). A passing suite doesn't replace a real `hyprctl reload` check on the actual machine — it only guarantees the Lua is structurally correct.
+
 ## Key Files
 
-- `hypr/hyprland.conf` — Main Hyprland entry point (sources all modules)
-- `hypr/modules/binds.conf` — All Hyprland keybindings
-- `hypr/modules/autostart.conf` — Programs launched on login
+- `hypr/hyprland.lua` — Main Hyprland entry point (requires all `modules/*.lua`)
+- `hypr/modules/binds.lua` — All Hyprland keybindings
+- `hypr/modules/autostart.lua` — Programs launched on login
 - `nvim/init.lua` — Neovim entry point (auto-format on save enabled)
 - `nvim/lua/user/keymaps.lua` — Neovim keybindings
 - `matugen/config.toml` — Template mapping for color generation
