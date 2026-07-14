@@ -72,6 +72,10 @@ TPM and Catppuccin are git submodules under `tmux/plugins/`. To install plugins:
 
 When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), then the module (green). A passing suite doesn't replace a real `hyprctl reload` check on the actual machine — it only guarantees the Lua is structurally correct.
 
+**Gotchas found via live `hyprctl reload` (mock can't catch these):**
+- `hl.bind` key combos: every modifier needs its own `+` — `"Ctrl SHIFT + 4"` fails (`Unknown keysym: "Ctrl SHIFT", did you forget a +?"`). Modifier names are also case-sensitive uppercase — `"Ctrl + SHIFT + 4"` still fails (`Unknown keysym: "Ctrl"`); it must be `"CTRL + SHIFT + 4"`.
+- `hl.curve` bezier control point values cap at 2.00 — going over errors at load (`point ...: value X is more than the maximum of 2.00`) rather than clamping silently.
+
 ## Key Files
 
 - `hypr/hyprland.lua` — Main Hyprland entry point (requires all `modules/*.lua`)
