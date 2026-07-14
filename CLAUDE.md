@@ -53,6 +53,20 @@ Each top-level directory maps to one tool:
 
 Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. Individual plugin configurations live in `nvim/lua/user/plugins/`. Lock file: `nvim/lazy-lock.json`.
 
+### Neovim Config Tests
+
+`nvim/tests/` is a regression harness for the config. Unlike `hypr/tests` (which must mock the `hl` global — there's no local Wayland), Neovim IS present, so these load the real config modules inside a real headless Neovim and assert on actual `vim` state. Everything is network-free.
+
+- Run: `nvim --headless -u NONE -i NONE -l nvim/tests/run_tests.lua`
+- `nvim/tests/support/` — `assert_util.lua` (assertions) + `harness.lua` (paths, module loading, lazy-spec capture).
+- `nvim/tests/test_*.lua` — one concern each, in tiers:
+  - **Real state:** `test_options`, `test_keymaps`, `test_init` — `dofile` the module, assert resulting `vim.o` / keymaps / autocmds.
+  - **Spec validation:** `test_plugins_spec` — mocks `require('lazy')` to capture the spec (no plugin install), checks for duplicate repos, valid `owner/repo` ids, and that every `require('user/plugins/X')` target file exists.
+  - **Source checks:** `test_highlights` — greps `plugins.lua`/config source for highlight-group correctness (e.g. a group DEFINED under a misspelled name silently fails to match the name other configs `highlight link` against). Used when the code can't run headless (catppuccin's config only runs once the plugin loads).
+  - **Compile check:** `test_compile` — `loadfile`s every config `.lua` (incl. per-plugin config files whose plugins aren't installed in the headless env), catching syntax regressions without executing anything.
+
+When editing an `nvim/lua/**` file: update its test first (red), then the config (green). Per-plugin config files (`lua/user/plugins/*.lua`) require their plugins at runtime, so they're only compile-checked, not executed. A passing suite doesn't replace opening real Neovim — it guarantees the config is structurally correct and the owned options/keymaps/spec are intact.
+
 ### AGS Bar (TypeScript)
 
 The `ags/` directory is a TypeScript project with `node_modules/` and GObject Introspection type definitions in `ags/@girs/`. It uses TSX components and targets GTK4 via the AGS framework.
