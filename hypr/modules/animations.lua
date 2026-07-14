@@ -50,10 +50,10 @@ hl.config({
 
 -- Default curves, see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Animations/#curves
 hl.curve("easeOutQuint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } })
--- NOTE: ported verbatim from animations.conf — X control points (8, 8) are
--- outside the usual 0-1 bezier range. Possibly a pre-existing typo; left
--- as-is for a faithful migration.
-hl.curve("linear", { type = "bezier", points = { { 8, 8 }, { 1, 1 } } })
+-- animations.conf had `bezier = linear, 8,8,1,1` — a pre-existing typo:
+-- (8,8) exceeds Hyprland's real max of 2.00 per control point and errors
+-- at load. Fixed to the actual linear bezier (0,0)->(1,1).
+hl.curve("linear", { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
 hl.curve("myBezier", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
 
 -- Default animations, see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Animations/

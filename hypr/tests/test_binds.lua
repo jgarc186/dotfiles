@@ -32,10 +32,13 @@ local expected = {
     { keys = mainMod .. " + O", dispatcher = exec("waybar &") },
     { keys = mainMod .. " + X", dispatcher = exec("hyprlock") },
 
-    { keys = "Ctrl SHIFT + 4", dispatcher = exec("hyprshot -m region output --clipboard-only") },
-    { keys = "Ctrl SHIFT + R",
+    -- Every modifier needs its own "+" — "Ctrl SHIFT + 4" parses as one bad
+    -- modifier token ("Ctrl SHIFT") and fails: 'failed to parse key string:
+    -- Unknown keysym: "Ctrl SHIFT", did you forget a +?'
+    { keys = "Ctrl + SHIFT + 4", dispatcher = exec("hyprshot -m region output --clipboard-only") },
+    { keys = "Ctrl + SHIFT + R",
       dispatcher = exec("wf-recorder --audio=effect_output.j415-mic -f ~/Videos/recording-$(date +%Y%m%d-%H%M%S).mp4") },
-    { keys = "Ctrl SHIFT + S", dispatcher = exec("pkill -SIGINT wf-recorder") },
+    { keys = "Ctrl + SHIFT + S", dispatcher = exec("pkill -SIGINT wf-recorder") },
 
     { keys = mainMod .. " + h",    dispatcher = focus({ direction = "left" }) },
     { keys = mainMod .. " + l",    dispatcher = focus({ direction = "right" }) },

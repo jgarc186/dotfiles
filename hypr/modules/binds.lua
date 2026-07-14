@@ -20,11 +20,11 @@ hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("hyprlock"))
 
 -- Taking a screenshot of a region of the screen and copying it to your clipboard
 -- Reference: https://github.com/Gustash/Hyprshot
-hl.bind("Ctrl SHIFT + 4", hl.dsp.exec_cmd("hyprshot -m region output --clipboard-only"))
+hl.bind("Ctrl + SHIFT + 4", hl.dsp.exec_cmd("hyprshot -m region output --clipboard-only"))
 
 -- Screen recording and stopping it
-hl.bind("Ctrl SHIFT + R", hl.dsp.exec_cmd("wf-recorder --audio=effect_output.j415-mic -f ~/Videos/recording-$(date +%Y%m%d-%H%M%S).mp4"))
-hl.bind("Ctrl SHIFT + S", hl.dsp.exec_cmd("pkill -SIGINT wf-recorder"))
+hl.bind("Ctrl + SHIFT + R", hl.dsp.exec_cmd("wf-recorder --audio=effect_output.j415-mic -f ~/Videos/recording-$(date +%Y%m%d-%H%M%S).mp4"))
+hl.bind("Ctrl + SHIFT + S", hl.dsp.exec_cmd("pkill -SIGINT wf-recorder"))
 
 -- Move focus with mainMod + arrow keys
 hl.bind(mainMod .. " + h",    hl.dsp.focus({ direction = "left" }))

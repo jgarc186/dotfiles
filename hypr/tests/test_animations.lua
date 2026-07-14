@@ -61,9 +61,14 @@ assert_util.equal(#curve_calls, 3, "expected 3 hl.curve calls")
 assert_util.equal(curve_calls[1].args,
     { name = "easeOutQuint", spec = { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 } } } },
     "easeOutQuint curve mismatch")
+-- animations.conf had `bezier = linear, 8,8,1,1` — a pre-existing typo whose
+-- (8,8) control point exceeds Hyprland's real max of 2.00 and errors at
+-- load ('hl.curve("linear"): point 1[1]: value 8 is more than the maximum
+-- of 2.00'). Fixed to the actual linear bezier (0,0)->(1,1) rather than
+-- ported verbatim.
 assert_util.equal(curve_calls[2].args,
-    { name = "linear", spec = { type = "bezier", points = { { 8, 8 }, { 1, 1 } } } },
-    "linear curve mismatch (ported verbatim from animations.conf, incl. out-of-range points)")
+    { name = "linear", spec = { type = "bezier", points = { { 0, 0 }, { 1, 1 } } } },
+    "linear curve mismatch")
 assert_util.equal(curve_calls[3].args,
     { name = "myBezier", spec = { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } } },
     "myBezier curve mismatch")
