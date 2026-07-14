@@ -37,7 +37,7 @@ This reads `matugen/config.toml` and writes generated color files to:
 ### Configuration Structure
 
 Each top-level directory maps to one tool:
-- `hypr/` — Hyprland WM; entry point `hypr/hyprland.lua` (Hyprland 0.55+ Lua config, `hl.*` API), modular config split across `hypr/modules/*.lua` (binds, monitors, autostart, animations, input, workspaces, etc.). Legacy `hyprland.conf` + `modules/*.conf` kept as a backup — Hyprland ignores them once `hyprland.lua` exists.
+- `hypr/` — Hyprland WM; entry point `hypr/hyprland.lua` (Hyprland 0.55+ Lua config, `hl.*` API), modular config split across `hypr/modules/*.lua` (binds, monitors, autostart, animations, input, workspaces, etc.). Legacy hyprlang `hyprland.conf`/`modules/*.conf` have been removed — fully migrated. `hyprlock.conf` and `hyprsunset.conf` are separate tools still on hyprlang, unaffected by this migration.
 - `nvim/` — Neovim; entry point `init.lua`, plugins via Lazy.nvim, per-plugin configs in `lua/user/plugins/`
 - `waybar/` — Status bar; layout in `config.jsonc`, styling in `style.css`
 - `ags/` — TypeScript/TSX custom bar (in development, replacing waybar); entry `app.tsx`
@@ -63,7 +63,7 @@ TPM and Catppuccin are git submodules under `tmux/plugins/`. To install plugins:
 
 ### Hyprland Lua Config + Tests
 
-`hypr/hyprland.lua` is a sequence of `require("modules.xxx")` calls, in the same order `hyprland.conf` used to `source` its modules. Each `hypr/modules/*.lua` sits next to its old `.conf` counterpart and should stay a faithful translation of it (same binds, same values) unless a change is intentional.
+`hypr/hyprland.lua` is a sequence of `require("modules.xxx")` calls. The hyprlang `.conf` originals are gone (migration complete); `hypr/modules/*.lua` is now the source of truth.
 
 `hypr/tests/` is a TDD harness for this config, since there's no local Hyprland/Wayland to run it against:
 - `hypr/tests/support/mock_hl.lua` — fake `hl` global that records every call a module makes.
