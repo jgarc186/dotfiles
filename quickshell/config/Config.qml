@@ -25,7 +25,7 @@ Singleton {
 
     component BarConfig: QtObject {
         // Bar entries, top to bottom. "spacer" pushes everything after it down.
-        readonly property list<string> entries: ["logo", "workspaces", "spacer", "tray", "statusIcons", "clock", "power"]
+        readonly property list<string> entries: ["logo", "workspaces", "spacer", "tray", "statusIcons", "themeMode", "clock", "power"]
 
         readonly property WorkspacesConfig workspaces: WorkspacesConfig {}
         readonly property ClockConfig clock: ClockConfig {}

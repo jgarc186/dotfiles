@@ -62,6 +62,8 @@ ColumnLayout {
                         return trayComp;
                     case "statusIcons":
                         return statusIconsComp;
+                    case "themeMode":
+                        return themeModeComp;
                     case "clock":
                         return clockComp;
                     case "power":
@@ -97,6 +99,12 @@ ColumnLayout {
         id: statusIconsComp
 
         StatusIcons {}
+    }
+
+    Component {
+        id: themeModeComp
+
+        ThemeToggle {}
     }
 
     Component {

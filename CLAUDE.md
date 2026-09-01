@@ -47,7 +47,7 @@ Each top-level directory maps to one tool:
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
 - `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`)
 - `matugen/` — Theme generator config and templates
-- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
+- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
 - `starship/starship.toml` — Shell prompt (Catppuccin Mocha palette)
 
@@ -99,8 +99,14 @@ Structure:
 - `services/` — singletons wrapping system state: `Colours` (matugen palette plus
   M3 layer/transparency helpers), `Hypr`, `Time`, `Audio` (Pipewire), `Batt`
   (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
-  also scans, connects and disconnects for the Wi-Fi popout), `SysInfo`,
+  also scans, connects and disconnects for the Wi-Fi popout), `Mem`
+  (`/proc/meminfo`), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
   `ShellState`. `services/Scheme.qml` is matugen output — never edit it.
+
+  `Mem` polls: procfs files report a size of 0 and inotify never fires on them,
+  so `watchChanges` is out, but `FileView` reads them correctly and `reload()`
+  re-reads rather than serving a cache. It polls every 5s, or every second while
+  something is showing the numbers (`Mem.watch()` / `Mem.unwatch()`).
 - `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
   + press ripple), `Anim`/`CAnim` (the motion tokens as animation presets),
   `Tooltip`, and `MaterialShape`.
@@ -160,6 +166,39 @@ every `pragma Singleton` file as a singleton).
 Fonts: the shell wants `ttf-material-symbols-variable-git` (icons — without it
 every icon renders as its literal name) and `ttf-rubik-vf` (text). Both are in
 `arch_linux/pkglist.txt`. `CaskaydiaCove NF` covers the mono font.
+
+### Light/Dark Mode
+
+`scripts/theme-mode [light|dark|toggle|status]` (symlinked to
+`~/.local/bin/theme-mode`) switches the desktop. There is no single light/dark
+switch on Linux, so it drives the three layers that between them cover
+everything here:
+
+1. `matugen --mode` — regenerates every colour file in the dotfiles; each app
+   reloads through the `post_hook`s in `matugen/config.toml`. Hyprland needs no
+   hook: `misc:disable_autoreload` is false and it watches sourced files.
+2. `gsettings … color-scheme` — the key `xdg-desktop-portal-gtk` publishes as
+   `org.freedesktop.appearance`. Firefox, Chromium, Electron and GTK4/libadwaita
+   read it and switch live.
+3. `gsettings … gtk-theme` — GTK3 apps, which predate the portal. The script
+   swaps the `-Light`/`-Dark` suffix on whatever theme is set rather than
+   hardcoding one, and leaves it alone if the variant isn't installed.
+
+The wallpaper to re-theme from is recovered from the `$image` line the hyprland
+template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded.
+
+**`--prefer` is not optional.** When an image yields several candidate source
+colours, matugen asks which to use, and *aborts* rather than guessing when it
+can't find a terminal to ask in — which is every invocation that isn't a human
+at a shell, the bar button included. The script passes `--prefer saturation`,
+the value that reproduces the palette this setup already had; override with
+`MATUGEN_PREFER`. Compare candidates with
+`matugen image <wall> -m dark --prefer <x> --dry-run -j hex`.
+
+The bar entry (`modules/bar/components/ThemeToggle.qml`, entry name
+`themeMode`) reads state from the portal key via the `Theme` service rather than
+from our own palette, so a `gsettings` change made by hand shows up too. It
+shows the mode *in effect*, not the one clicking moves to.
 
 ### AGS Bar (TypeScript)
 

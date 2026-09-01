@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#
+# Switch the desktop between light and dark.
+#
+# There is no single light/dark switch on Linux, so this drives the three
+# layers that between them cover everything on this machine:
+#
+#   1. matugen  - regenerates every colour file in the dotfiles (hyprland,
+#                 waybar, rofi, kitty, ghostty, nvim, quickshell). Each app
+#                 reloads itself through the post_hooks in matugen/config.toml.
+#   2. color-scheme  - the gsettings key xdg-desktop-portal-gtk publishes as
+#                 org.freedesktop.appearance. Firefox, Chromium, Electron and
+#                 GTK4/libadwaita apps read it and switch live.
+#   3. gtk-theme - GTK3 apps, which predate the portal and need a named theme.
+#
+# Usage: theme-mode [light|dark|toggle|status]      (default: toggle)
+#
+# Set MATUGEN_PREFER to change how matugen picks a source colour from the
+# wallpaper - see --prefer in `matugen image --help` for the choices.
+#
+set -euo pipefail
+
+IFACE="org.gnome.desktop.interface"
+COLORS="${HOME}/.config/hypr/colors.conf"
+
+# When an image yields several candidate source colours, matugen asks which to
+# use - and aborts outright rather than guessing if it can't find a terminal to
+# ask in, which is every invocation that isn't a human at a shell. Passing a
+# preference is what makes this runnable from the bar or a keybind at all.
+#
+# "saturation" is the one that reproduces the palette this setup already had.
+PREFER="${MATUGEN_PREFER:-saturation}"
+
+die() {
+    echo "theme-mode: $*" >&2
+    exit 1
+}
+
+# The portal key is authoritative for what the system is set to. It starts life
+# as 'default', which on this setup means the dark scheme matugen shipped with.
+current_mode() {
+    case "$(gsettings get "$IFACE" color-scheme 2>/dev/null)" in
+    *prefer-light*) echo light ;;
+    *) echo dark ;;
+    esac
+}
+
+# matugen needs the image it themed from. The hyprland template writes it out
+# as line 1 of colors.conf, so the current wallpaper is recoverable without
+# hardcoding a path here.
+current_wallpaper() {
+    [[ -r $COLORS ]] || die "$COLORS not readable - has matugen ever run?"
+
+    local image
+    image="$(sed -n 's/^\$image = //p' "$COLORS" | head -1)"
+
+    [[ -n $image ]] || die "no \$image line in $COLORS"
+    [[ -f $image ]] || die "wallpaper $image no longer exists"
+
+    echo "$image"
+}
+
+# Swap the light/dark suffix on whatever GTK3 theme is set rather than
+# hardcoding one, so changing themes doesn't mean editing this script. Left
+# alone if the matching variant isn't installed.
+gtk_theme_for() {
+    local mode=$1 current base want
+    current="$(gsettings get "$IFACE" gtk-theme | tr -d \')"
+    base="${current%-Light}"
+    base="${base%-Dark}"
+
+    [[ $mode == light ]] && want="${base}-Light" || want="${base}-Dark"
+
+    if [[ -d /usr/share/themes/$want || -d $HOME/.themes/$want ]]; then
+        echo "$want"
+    else
+        echo "$current"
+    fi
+}
+
+mode="${1:-toggle}"
+
+case "$mode" in
+status)
+    current_mode
+    exit 0
+    ;;
+toggle)
+    [[ "$(current_mode)" == dark ]] && mode=light || mode=dark
+    ;;
+light | dark) ;;
+*)
+    die "unknown mode '$mode' (expected light, dark, toggle or status)"
+    ;;
+esac
+
+matugen image "$(current_wallpaper)" --mode "$mode" --prefer "$PREFER"
+
+gsettings set "$IFACE" color-scheme "prefer-$mode"
+gsettings set "$IFACE" gtk-theme "$(gtk_theme_for "$mode")"
+
+echo "$mode"
