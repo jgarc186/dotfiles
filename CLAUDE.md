@@ -22,6 +22,10 @@ The central theming system is **Matugen** (Material Design 3 color generator). R
 matugen image <path-to-wallpaper>
 ```
 
+Prefer `theme-mode wallpaper <path>` for a wallpaper change: matugen's `--mode`
+defaults to **dark**, so a bare `matugen image` run drags the palette to dark
+regardless of the mode the desktop is in (see Light/Dark Mode below).
+
 This reads `matugen/config.toml` and writes generated color files to:
 - `hypr/colors.conf` — Hyprland colors
 - `waybar/colors.css` — Waybar colors (sends `SIGUSR2` to reload live)
@@ -186,6 +190,21 @@ everything here:
 
 The wallpaper to re-theme from is recovered from the `$image` line the hyprland
 template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded.
+
+Two subcommands exist for the halves of that: `theme-mode wallpaper <image>`
+re-themes from a new wallpaper in whatever mode the desktop is already in (what
+you want instead of `matugen image`, whose `--mode` defaults to dark), and
+`theme-mode apply <light|dark>` writes layers 2 and 3 only, skipping matugen.
+
+**The palette and the portal key can each move without the other**, and the
+toggle's first click goes the wrong way whenever they disagree — it is leaving a
+mode only half the desktop is in. `Theme` reconciles both directions: the
+palette moving (a hand-run `matugen image`) pulls the other two layers to it via
+`apply`, and the key moving (a hand-run `gsettings set`) triggers the full
+re-theme. Each is caught by its own source — `gsettings monitor` for the key,
+and, for the palette, the **startup status read** rather than a change handler:
+rewriting `Scheme.qml` reloads the config, so the singleton that would have seen
+`Colours.light` change no longer exists by the time it does.
 
 **`--prefer` is not optional.** When an image yields several candidate source
 colours, matugen asks which to use, and *aborts* rather than guessing when it

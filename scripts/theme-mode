@@ -14,6 +14,13 @@
 #   3. gtk-theme - GTK3 apps, which predate the portal and need a named theme.
 #
 # Usage: theme-mode [light|dark|toggle|status]      (default: toggle)
+#        theme-mode wallpaper <image>   re-theme from a new wallpaper, staying
+#                                       in the mode the desktop is already in
+#        theme-mode apply <light|dark>  layers 2 and 3 only, no matugen run
+#
+# Use `theme-mode wallpaper` rather than `matugen image` directly: matugen's
+# --mode defaults to dark, so a bare run drags the palette to dark and leaves
+# the other two layers where they were.
 #
 # Set MATUGEN_PREFER to change how matugen picks a source colour from the
 # wallpaper - see --prefer in `matugen image --help` for the choices.
@@ -78,6 +85,18 @@ gtk_theme_for() {
     fi
 }
 
+retheme() {
+    matugen image "$1" --mode "$2" --prefer "$PREFER"
+}
+
+# Layers 2 and 3. Split out because the palette can move on its own - a matugen
+# run from a terminal - and these two then need bringing to it without paying
+# for a second re-theme.
+apply_mode() {
+    gsettings set "$IFACE" color-scheme "prefer-$1"
+    gsettings set "$IFACE" gtk-theme "$(gtk_theme_for "$1")"
+}
+
 mode="${1:-toggle}"
 
 case "$mode" in
@@ -85,18 +104,35 @@ status)
     current_mode
     exit 0
     ;;
+apply)
+    target="${2:-}"
+    [[ $target == light || $target == dark ]] || die "apply needs 'light' or 'dark'"
+    apply_mode "$target"
+    echo "$target"
+    exit 0
+    ;;
+wallpaper)
+    image="${2:-}"
+    [[ -n $image ]] || die "wallpaper needs an image path"
+    [[ -f $image ]] || die "no such image: $image"
+    # Absolute, because matugen writes this path straight into colors.conf and
+    # current_wallpaper reads it back from wherever the next run happens to be
+    image="$(realpath "$image")"
+    keep="$(current_mode)"
+    retheme "$image" "$keep"
+    echo "$keep"
+    exit 0
+    ;;
 toggle)
     [[ "$(current_mode)" == dark ]] && mode=light || mode=dark
     ;;
 light | dark) ;;
 *)
-    die "unknown mode '$mode' (expected light, dark, toggle or status)"
+    die "unknown mode '$mode' (expected light, dark, toggle, status, wallpaper or apply)"
     ;;
 esac
 
-matugen image "$(current_wallpaper)" --mode "$mode" --prefer "$PREFER"
-
-gsettings set "$IFACE" color-scheme "prefer-$mode"
-gsettings set "$IFACE" gtk-theme "$(gtk_theme_for "$mode")"
+retheme "$(current_wallpaper)" "$mode"
+apply_mode "$mode"
 
 echo "$mode"

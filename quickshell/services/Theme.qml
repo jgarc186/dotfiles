@@ -9,6 +9,9 @@
 // it is what the *system* is set to, and reading it means an external change -
 // gsettings run by hand, another tool flipping it - is reflected here too.
 //
+// The two can fall out of step, though, because either half can be moved on its
+// own, so each direction gets brought back to the other below.
+//
 pragma Singleton
 
 import QtQuick
@@ -53,7 +56,37 @@ Singleton {
         setProc.running = true;
     }
 
+    // Bring the portal key and the GTK3 theme to the mode the palette is in,
+    // without re-running matugen.
+    //
+    // `matugen image <wallpaper>` run by hand does exactly this to us: its
+    // --mode defaults to dark, so it rewrites the palette and leaves the other
+    // two layers behind. The desktop is then split - a dark bar, a still-light
+    // Firefox - and the toggle's first click goes the wrong way, because the
+    // two halves disagree about which mode it is leaving. The palette is what
+    // you can see, so it wins and the other layers follow it.
+    function syncToPalette(): void {
+        if (busy || Colours.light === light)
+            return;
+
+        light = Colours.light;
+        applyProc.command = [root.script, "apply", light ? "light" : "dark"];
+        applyProc.running = true;
+    }
+
     Component.onCompleted: light = Colours.light
+
+    // A matugen run rewrites Scheme.qml, which reloads the config and builds a
+    // fresh singleton, so the palette moving is usually *not* something this
+    // instance lives to see a signal for - the startup read below is where that
+    // case gets caught. This covers the one where the reload doesn't happen.
+    Connections {
+        target: Colours
+
+        function onLightChanged(): void {
+            root.syncToPalette();
+        }
+    }
 
     Process {
         id: readProc
@@ -65,8 +98,17 @@ Singleton {
             // construction, and its answer - taken before the script has
             // reached its gsettings writes - otherwise lands on top of the
             // optimistic value and drags the icon back to the old mode.
-            onStreamFinished: if (!root.busy)
-                root.light = text.trim() === "light"
+            onStreamFinished: {
+                if (root.busy)
+                    return;
+
+                root.light = text.trim() === "light";
+                // Running at construction is what makes this the reconcile
+                // point after a config reload: if the palette we just came up
+                // on disagrees with the key, something re-themed us behind the
+                // portal's back.
+                root.syncToPalette();
+            }
         }
     }
 
@@ -84,12 +126,30 @@ Singleton {
     }
     // qmllint enable signal-handler-parameters
 
+    Process {
+        id: applyProc
+    }
+
     // Catches the key being changed by anything other than us
     Process {
         running: true
         command: ["gsettings", "monitor", "org.gnome.desktop.interface", "color-scheme"]
         stdout: SplitParser {
-            onRead: line => root.light = line.includes("prefer-light")
+            onRead: line => {
+                if (root.busy)
+                    return;
+
+                const wanted = line.includes("prefer-light");
+                // Our own writes come back through here too; they already agree
+                if (wanted === root.light)
+                    return;
+
+                root.light = wanted;
+                // Changed by hand, so the palette is the half left behind this
+                // time and needs the full re-theme rather than `apply`
+                if (Colours.light !== wanted)
+                    root.setMode(wanted ? "light" : "dark");
+            }
         }
     }
 }
