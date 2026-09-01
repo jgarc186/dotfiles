@@ -14,17 +14,24 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.services
 
 Singleton {
     id: root
 
     readonly property string script: `${Quickshell.env("HOME")}/.local/bin/theme-mode`
 
-    // 'default' is the value the key ships with, and on this setup the scheme
-    // matugen generated for it is the dark one
+    // Seeded from the palette, because rewriting Scheme.qml is what makes
+    // Quickshell reload the config, and that recreates this singleton
+    // mid-switch: starting from a fixed default would blink the icon back to
+    // the old mode until the status read landed.
+    //
+    // Seeded once rather than bound, so that a gsettings change made outside
+    // this shell still wins: a standing binding on Colours would keep pulling
+    // the value back to whatever the palette says.
     property bool light: false
-    // matugen takes a moment to regenerate every template, and starting a
-    // second run over the top of the first interleaves their writes
+    // matugen rewrites every template on the way through, so a second run
+    // started over the first interleaves their writes
     property bool busy: false
 
     function toggle(): void {
@@ -36,9 +43,17 @@ Singleton {
             return;
 
         busy = true;
+        // Move the icon now instead of at the end of the run. The script takes
+        // well under a second, but waiting for it means the one control that
+        // should feel immediate is the last thing on screen to move. If the run
+        // fails, the read below puts it back.
+        light = mode === "light";
+
         setProc.command = [root.script, mode];
         setProc.running = true;
     }
+
+    Component.onCompleted: light = Colours.light
 
     Process {
         id: readProc
@@ -46,7 +61,12 @@ Singleton {
         running: true
         command: [root.script, "status"]
         stdout: StdioCollector {
-            onStreamFinished: root.light = text.trim() === "light"
+            // Never over a switch in flight. This process is also started at
+            // construction, and its answer - taken before the script has
+            // reached its gsettings writes - otherwise lands on top of the
+            // optimistic value and drags the icon back to the old mode.
+            onStreamFinished: if (!root.busy)
+                root.light = text.trim() === "light"
         }
     }
 

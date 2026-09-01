@@ -200,6 +200,15 @@ The bar entry (`modules/bar/components/ThemeToggle.qml`, entry name
 from our own palette, so a `gsettings` change made by hand shows up too. It
 shows the mode *in effect*, not the one clicking moves to.
 
+`Theme` sets `light` optimistically on click rather than waiting for the script,
+which otherwise makes the one control that should feel immediate the last thing
+on screen to move. Two things fight that, both found by running it: rewriting
+`Scheme.qml` reloads the whole config and recreates the singleton mid-switch
+(hence seeding `light` from `Colours` in `Component.onCompleted`), and the
+status `Process` also runs at construction, so its answer — taken before the
+script reaches its gsettings writes — lands on top of the optimistic value
+unless it is guarded by `busy`.
+
 ### AGS Bar (TypeScript)
 
 The `ags/` directory is a TypeScript project with `node_modules/` and GObject Introspection type definitions in `ags/@girs/`. It uses TSX components and targets GTK4 via the AGS framework.
