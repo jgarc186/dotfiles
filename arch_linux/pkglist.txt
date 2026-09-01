@@ -82,6 +82,7 @@ starship
 sudo
 tlp
 tmux
+ttf-cascadia-code-nerd
 ttf-dejavu
 ttf-jetbrains-mono
 ttf-material-symbols-variable-git
