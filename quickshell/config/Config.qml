@@ -64,6 +64,6 @@ Singleton {
     }
 
     component StatusIconsConfig: QtObject {
-        readonly property list<string> entries: ["audio", "network", "bluetooth", "battery"]
+        readonly property list<string> entries: ["memory", "audio", "network", "bluetooth", "battery"]
     }
 }

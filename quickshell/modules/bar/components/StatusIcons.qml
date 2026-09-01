@@ -37,6 +37,8 @@ StyledRect {
 
                 sourceComponent: {
                     switch (modelData) {
+                    case "memory":
+                        return memoryComp;
                     case "audio":
                         return audioComp;
                     case "microphone":
@@ -51,6 +53,18 @@ StyledRect {
                     return null;
                 }
             }
+        }
+    }
+
+    Component {
+        id: memoryComp
+
+        HoverIcon {
+            icon: "memory"
+            tooltip: Mem.summary
+
+            // Only poll every second while the tooltip is actually up
+            onHoveredChanged: hovered ? Mem.watch() : Mem.unwatch()
         }
     }
 
@@ -141,48 +155,56 @@ StyledRect {
     Component {
         id: batteryComp
 
-        Item {
-            id: batt
-
+        HoverIcon {
             visible: Batt.available
-            implicitWidth: battIcon.implicitWidth
-            implicitHeight: battIcon.implicitHeight
+            icon: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
+            colour: Batt.low ? Colours.palette.m3error : root.colour
+            tooltip: Batt.summary
+        }
+    }
 
-            onVisibleChanged: if (!visible)
-                ShellState.hideTooltip(batt)
+    // An icon that reports something on hover. Deliberately not a StateLayer:
+    // its ripple and pointing cursor would promise a popout that these icons
+    // don't have.
+    component HoverIcon: Item {
+        id: hover
 
-            Connections {
-                target: Batt
+        property string icon
+        property color colour: root.colour
+        // Rebinding this while the bubble is up updates it in place, so a
+        // draining battery or a changing memory figure doesn't sit frozen
+        property string tooltip
+        readonly property alias hovered: hoverArea.containsMouse
 
-                function onSummaryChanged(): void {
-                    ShellState.updateTooltip(batt, Batt.summary);
-                }
-            }
+        implicitWidth: glyph.implicitWidth
+        implicitHeight: glyph.implicitHeight
 
-            // Hover only - there is nothing to click yet, so no StateLayer:
-            // its ripple and pointer cursor would promise a popout that
-            // doesn't exist. The hit area is still squared up to match the
-            // other icons.
-            MouseArea {
-                anchors.centerIn: parent
-                implicitWidth: implicitHeight
-                implicitHeight: battIcon.implicitHeight + Appearance.padding.small
+        onTooltipChanged: ShellState.updateTooltip(hover, tooltip)
+        onVisibleChanged: if (!visible)
+            ShellState.hideTooltip(hover)
 
-                hoverEnabled: true
+        MouseArea {
+            id: hoverArea
 
-                onEntered: ShellState.showTooltip(batt, Batt.summary, batt.mapToItem(null, 0, batt.height / 2).y)
-                onExited: ShellState.hideTooltip(batt)
-            }
+            // Square the hit area up without stretching the row
+            anchors.centerIn: parent
+            implicitWidth: implicitHeight
+            implicitHeight: glyph.implicitHeight + Appearance.padding.small
 
-            MaterialIcon {
-                id: battIcon
+            hoverEnabled: true
 
-                anchors.centerIn: parent
+            onEntered: ShellState.showTooltip(hover, hover.tooltip, hover.mapToItem(null, 0, hover.height / 2).y)
+            onExited: ShellState.hideTooltip(hover)
+        }
 
-                animate: true
-                text: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
-                color: Batt.low ? Colours.palette.m3error : root.colour
-            }
+        MaterialIcon {
+            id: glyph
+
+            anchors.centerIn: parent
+
+            animate: true
+            text: hover.icon
+            color: hover.colour
         }
     }
 }
