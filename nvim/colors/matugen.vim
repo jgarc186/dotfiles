@@ -5,13 +5,13 @@ hi Operator guibg=None guifg=#915e52
 
 hi Todo guibg=None guifg=#ae7163
 
-hi Identifier guibg=None guifg=#000000
-hi Constant guibg=None guifg=#000000
-hi Type guibg=None guifg=#000000
-hi String guibg=None guifg=#000000
-hi Special guibg=None guifg=#000000
-hi PreProc guibg=None guifg=#000000
-hi Function guibg=None guifg=#000000
+hi Identifier guibg=None guifg=#cb8373
+hi Constant guibg=None guifg=#68463e
+hi Type guibg=None guifg=#210b0b
+hi String guibg=None guifg=#080204
+hi Special guibg=None guifg=#020000
+hi PreProc guibg=None guifg=#020000
+hi Function guibg=None guifg=#000002
 hi Statement guibg=None guifg=#000000
 
 hi Error guibg=#93000a guifg=#ffdad6
