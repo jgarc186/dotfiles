@@ -78,8 +78,7 @@ StyledRect {
         }
     }
 
-    // The only interactive icon of the lot: hovering names the current network,
-    // clicking opens the Wi-Fi popout
+    // Hovering names the current network, clicking opens the Wi-Fi popout
     Component {
         id: networkComp
 
@@ -137,14 +136,53 @@ StyledRect {
         }
     }
 
+    // Hovering reports the charge level and, when UPower has an estimate, how
+    // long it lasts
     Component {
         id: batteryComp
 
-        MaterialIcon {
-            animate: true
+        Item {
+            id: batt
+
             visible: Batt.available
-            text: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
-            color: Batt.low ? Colours.palette.m3error : root.colour
+            implicitWidth: battIcon.implicitWidth
+            implicitHeight: battIcon.implicitHeight
+
+            onVisibleChanged: if (!visible)
+                ShellState.hideTooltip(batt)
+
+            Connections {
+                target: Batt
+
+                function onSummaryChanged(): void {
+                    ShellState.updateTooltip(batt, Batt.summary);
+                }
+            }
+
+            // Hover only - there is nothing to click yet, so no StateLayer:
+            // its ripple and pointer cursor would promise a popout that
+            // doesn't exist. The hit area is still squared up to match the
+            // other icons.
+            MouseArea {
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: battIcon.implicitHeight + Appearance.padding.small
+
+                hoverEnabled: true
+
+                onEntered: ShellState.showTooltip(batt, Batt.summary, batt.mapToItem(null, 0, batt.height / 2).y)
+                onExited: ShellState.hideTooltip(batt)
+            }
+
+            MaterialIcon {
+                id: battIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
+                color: Batt.low ? Colours.palette.m3error : root.colour
+            }
         }
     }
 }
