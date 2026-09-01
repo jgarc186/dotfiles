@@ -78,13 +78,51 @@ StyledRect {
         }
     }
 
+    // The only interactive icon of the lot: hovering names the current network,
+    // clicking opens the Wi-Fi popout
     Component {
         id: networkComp
 
-        MaterialIcon {
-            animate: true
-            text: Net.ethernet ? "cable" : Net.connected ? Icons.getNetworkIcon(Net.strength) : "wifi_off"
-            color: root.colour
+        Item {
+            id: net
+
+            readonly property string tooltip: {
+                if (Net.ethernet)
+                    return "Ethernet";
+                if (Net.connected)
+                    return `${Net.ssid} \u00b7 ${Net.strength}%`;
+                return Net.wifiEnabled ? "Not connected" : "Wi-Fi off";
+            }
+
+            implicitWidth: netIcon.implicitWidth
+            implicitHeight: netIcon.implicitHeight
+
+            onTooltipChanged: ShellState.updateTooltip(net, tooltip)
+
+            StateLayer {
+                // Square the hit area up without stretching the row
+                anchors.fill: undefined
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: netIcon.implicitHeight + Appearance.padding.small
+                radius: Appearance.rounding.full
+                color: root.colour
+
+                onClicked: ShellState.network = !ShellState.network
+                onEntered: ShellState.showTooltip(net, net.tooltip, net.mapToItem(null, 0, net.height / 2).y)
+                onExited: ShellState.hideTooltip(net)
+            }
+
+            MaterialIcon {
+                id: netIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: Net.ethernet ? "cable" : Net.connected ? Icons.getNetworkIcon(Net.strength) : "wifi_off"
+                color: root.colour
+                fill: ShellState.network ? 1 : 0
+            }
         }
     }
 

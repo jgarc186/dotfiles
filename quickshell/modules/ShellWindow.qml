@@ -14,6 +14,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import "bar"
 import "border"
+import "network"
 import "session"
 import qs.components
 import qs.config
@@ -40,13 +41,18 @@ StyledWindow {
 
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: ShellState.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // The Wi-Fi popout has a password field, so it needs keys too
+    WlrLayershell.keyboardFocus: ShellState.session || ShellState.network ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: Region {
         item: bar
 
         Region {
             item: session
+        }
+
+        Region {
+            item: network
         }
     }
 
@@ -101,10 +107,80 @@ StyledWindow {
         }
     }
 
+    // Wi-Fi popout, centred on the bar rather than pinned to its icon: the
+    // list is tall enough that tracking the icon would run it off-screen.
+    Loader {
+        id: network
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+        anchors.verticalCenter: parent.verticalCenter
+
+        active: ShellState.network || opacity > 0
+        opacity: ShellState.network ? 1 : 0
+        scale: ShellState.network ? 1 : 0.85
+        transformOrigin: Item.Left
+
+        sourceComponent: Network {}
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
+    // Bar tooltips live here because BarWrapper clips its contents. Hidden
+    // while a popout is open, since both occupy the same strip of screen.
+    Loader {
+        id: tooltip
+
+        // Held over while the bubble fades out, so it doesn't blank mid-fade
+        property string lastText: ShellState.tooltipText
+
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.tooltipY - height / 2))
+
+        active: shown || opacity > 0
+        opacity: shown ? 1 : 0
+
+        sourceComponent: Tooltip {
+            text: tooltip.lastText
+        }
+
+        Connections {
+            target: ShellState
+
+            function onTooltipTextChanged(): void {
+                if (ShellState.tooltipText !== "")
+                    tooltip.lastText = ShellState.tooltipText;
+            }
+        }
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.FastEffects
+            }
+        }
+    }
+
     // Click outside to dismiss
     HyprlandFocusGrab {
-        active: ShellState.session
+        active: ShellState.session || ShellState.network
         windows: [root]
-        onCleared: ShellState.session = false
+        onCleared: {
+            ShellState.session = false;
+            ShellState.network = false;
+        }
     }
 }

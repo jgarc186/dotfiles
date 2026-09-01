@@ -98,12 +98,22 @@ Structure:
   `icons` list, falling back to `defaultIcon`).
 - `services/` — singletons wrapping system state: `Colours` (matugen palette plus
   M3 layer/transparency helpers), `Hypr`, `Time`, `Audio` (Pipewire), `Batt`
-  (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling),
-  `SysInfo`, `ShellState`. `services/Scheme.qml` is matugen output — never edit it.
+  (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
+  also scans, connects and disconnects for the Wi-Fi popout), `SysInfo`,
+  `ShellState`. `services/Scheme.qml` is matugen output — never edit it.
 - `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
-  + press ripple), `Anim`/`CAnim` (the motion tokens as animation presets), and
-  `MaterialShape`.
-- `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`.
+  + press ripple), `Anim`/`CAnim` (the motion tokens as animation presets),
+  `Tooltip`, and `MaterialShape`.
+- `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
+  `network/` (the Wi-Fi popout).
+
+Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
+widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
+widget drew beside itself would be cut off at the bar's edge. A widget flips a
+flag on `ShellState` (`session`, `network` — mutually exclusive) or calls
+`ShellState.showTooltip(owner, text, y)` with its own centre in window
+coordinates, and `ShellWindow` renders it, adds it to the input `mask`, and
+turns on layershell keyboard focus when a popout needs typing.
 
 `components/MaterialShape.qml` replaces upstream's `M3Shapes` C++ plugin: each
 shape is a polar radius function sampled at fixed angles, so morphing between two
@@ -140,8 +150,12 @@ every `pragma Singleton` file as a singleton).
   `/usr/lib/qt6/bin/qmllint`; override with `QMLLINT=`).
 - The suite must stay at zero warnings. Where a warning is a false positive
   (`PanelWindow` reported as uncreatable, Quickshell's Bluetooth types not being
-  declaratively exposed), suppress it narrowly with a
-  `// qmllint disable <check>` comment and a note on why.
+  declaratively exposed, `Process.onExited` handlers being uncompilable because
+  the signal's `exitStatus` is an unregistered `QProcess::ExitStatus`), suppress
+  it narrowly with a `// qmllint disable <check>` comment and a note on why.
+  Start that note with anything but the word "qmllint" — a comment whose first
+  word is `qmllint` is parsed as a directive, and every word in it is then
+  reported as an unknown lint category.
 
 Fonts: the shell wants `ttf-material-symbols-variable-git` (icons — without it
 every icon renders as its literal name) and `ttf-rubik-vf` (text). Both are in
