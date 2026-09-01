@@ -87,7 +87,7 @@ Item {
                 if (root.focused)
                     return Colours.palette.m3onPrimary;
                 if (overrideColour)
-                    return overrideColour;
+                    return Colours.role(overrideColour);
                 return root.isOccupied ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2);
             }
             // The focused glyph fills in; the rest stay outlined

@@ -47,6 +47,18 @@ Singleton {
         return depth === 0 ? Qt.alpha(c, Appearance.transparency.base) : alterColour(c, Appearance.transparency.layers, depth);
     }
 
+    // Resolves a colour written in the config: either a literal "#rrggbb", or
+    // the name of a role on the palette. Naming a role is what lets a config
+    // entry follow the theme - a literal is one mode's colour frozen in place,
+    // and #ffffff is invisible the moment the surface goes light.
+    function role(name: string): color {
+        if (name.startsWith("#"))
+            return name;
+        // qmllint disable missing-property
+        return palette[name] ?? palette.m3onSurface;
+        // qmllint enable missing-property
+    }
+
     // A readable foreground for an arbitrary background, keeping its hue.
     function on(c: color): color {
         if (c.hslLightness < 0.5)

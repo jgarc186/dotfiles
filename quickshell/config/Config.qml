@@ -48,7 +48,12 @@ Singleton {
         // overrides the dim occupied/empty colour so that glyph stays legible.
         // The focused workspace always uses m3onPrimary, since it sits on the
         // primary-coloured pill and a fixed colour would lose contrast there.
-        readonly property list<string> iconColours: ["", "", "", "#ffffff", ""]
+        //
+        // Either a literal "#rrggbb" or the name of a role on the palette. Name
+        // a role: a literal is one mode's colour frozen in place, and the
+        // #ffffff that used to sit here dropped to 1.05:1 against the light
+        // surface - the glyph was there, just invisible.
+        readonly property list<string> iconColours: ["", "", "", "m3onSurface", "m3onSurface"]
         readonly property bool perMonitorWorkspaces: true
     }
 
