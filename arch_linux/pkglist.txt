@@ -70,6 +70,7 @@ poppler
 postman-bin
 powertop
 psensor
+quickshell
 resvg
 ripgrep
 rofi
@@ -83,6 +84,8 @@ tlp
 tmux
 ttf-dejavu
 ttf-jetbrains-mono
+ttf-material-symbols-variable-git
+ttf-rubik-vf
 vala
 vim
 virtualbox

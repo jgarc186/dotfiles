@@ -29,6 +29,7 @@ This reads `matugen/config.toml` and writes generated color files to:
 - `ghostty/themes/Matugen` — Ghostty theme (sends `SIGUSR2` to reload live)
 - `kitty/themes/Matugen.conf` — Kitty theme (reloads via kitten)
 - `nvim/colors/matugen.vim` — Neovim colorscheme
+- `quickshell/services/Scheme.qml` — Quickshell M3 palette (Quickshell hot-reloads on file change)
 
 **Never manually edit these generated files** — they are overwritten on next `matugen` run. Edit the templates in `matugen/templates/` instead.
 
@@ -40,7 +41,8 @@ Each top-level directory maps to one tool:
 - `hypr/` — Hyprland WM; entry point `hypr/hyprland.lua` (Hyprland 0.55+ Lua config, `hl.*` API), modular config split across `hypr/modules/*.lua` (binds, monitors, autostart, animations, input, workspaces, etc.). Legacy hyprlang `hyprland.conf`/`modules/*.conf` have been removed — fully migrated. `hyprlock.conf` and `hyprsunset.conf` are separate tools still on hyprlang, unaffected by this migration.
 - `nvim/` — Neovim; entry point `init.lua`, plugins via Lazy.nvim, per-plugin configs in `lua/user/plugins/`
 - `waybar/` — Status bar; layout in `config.jsonc`, styling in `style.css`
-- `ags/` — TypeScript/TSX custom bar (in development, replacing waybar); entry `app.tsx`
+- `ags/` — TypeScript/TSX custom bar (superseded by `quickshell/`); entry `app.tsx`
+- `quickshell/` — Quickshell (QML) shell in the style of [caelestia-dots/shell](https://github.com/caelestia-dots/shell); entry `shell.qml`
 - `rofi/` — App launcher; extensive theme collection in `launchers/` and `colors/`
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
 - `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`)
@@ -66,6 +68,84 @@ Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. In
   - **Compile check:** `test_compile` — `loadfile`s every config `.lua` (incl. per-plugin config files whose plugins aren't installed in the headless env), catching syntax regressions without executing anything.
 
 When editing an `nvim/lua/**` file: update its test first (red), then the config (green). Per-plugin config files (`lua/user/plugins/*.lua`) require their plugins at runtime, so they're only compile-checked, not executed. A passing suite doesn't replace opening real Neovim — it guarantees the config is structurally correct and the owned options/keymaps/spec are intact.
+
+### Quickshell Shell (QML)
+
+`quickshell/` is a Material 3 shell for Hyprland modelled on
+[caelestia-dots/shell](https://github.com/caelestia-dots/shell). It is a
+from-scratch implementation, not a copy: upstream needs `quickshell-git` plus a
+C++ plugin (`Caelestia.Config`, `Caelestia.Blobs`, `M3Shapes`), while this runs
+on the stock Arch `quickshell` package with no compiled dependencies.
+
+Run it with `qs -p ~/developer/dotfiles/quickshell` (or `qs` once installed, since
+the install script symlinks it to `~/.config/quickshell`). It is **not** in
+`hypr/modules/autostart.lua` — waybar still is, and running both gives you two
+bars. Swap the autostart entry when you're ready to switch.
+
+Layout: a left vertical bar sitting inside a rounded frame drawn around the whole
+screen — OS icon, workspaces, spacer, tray, status icons, vertical clock, power.
+
+Structure:
+- `config/Appearance.qml` — M3 design tokens (rounding/spacing/padding 4→48, font
+  sizes, motion durations and bezier curves). Values match upstream's, so the
+  visual rhythm matches. **Inline components can't nest in QML**, so the token
+  sub-groups are declared at document level and wired together by wrapper
+  components.
+- `config/Config.qml` — the knobs worth changing: border thickness/rounding, bar
+  entry order, workspace count, per-workspace icons, clock format. Workspace
+  indicators have three `displayType`s: `shapes` (morphing Material shapes),
+  `text` (numbers), `icons` (a Material Symbols glyph per workspace, from the
+  `icons` list, falling back to `defaultIcon`).
+- `services/` — singletons wrapping system state: `Colours` (matugen palette plus
+  M3 layer/transparency helpers), `Hypr`, `Time`, `Audio` (Pipewire), `Batt`
+  (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling),
+  `SysInfo`, `ShellState`. `services/Scheme.qml` is matugen output — never edit it.
+- `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
+  + press ripple), `Anim`/`CAnim` (the motion tokens as animation presets), and
+  `MaterialShape`.
+- `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`.
+
+`components/MaterialShape.qml` replaces upstream's `M3Shapes` C++ plugin: each
+shape is a polar radius function sampled at fixed angles, so morphing between two
+shapes is elementwise interpolation of the samples. Polygons get rounded corners
+from a moving average over the radii. The focused workspace picks a random shape
+each time focus lands on it, which is where most of the "expressive" feel lives.
+
+**Gotchas found by running it (the linter can't catch these):**
+- `implicitWidth`/`implicitHeight` are read-only on `Text`, so `MaterialIcon` is
+  an `Item` wrapping a `StyledText` rather than a `Text` subclass. That's also
+  what keeps the bar layout intact when Material Symbols isn't installed and
+  glyph *names* render as words.
+- Reading `width`/`height` inside a `Shape`'s path binding is a binding loop —
+  `Shape` feeds its content bounds back into its implicit size. Derive from an
+  explicit size property instead.
+- JS `%` keeps the sign of the dividend, which silently collapses every
+  odd-sided `MaterialShape` polygon to a sliver. Use a positive modulo.
+
+### Quickshell Config Tests
+
+`quickshell/tests/run_tests.sh` type-checks every QML file with `qmllint`. The
+shell can't run headless (it needs a live Wayland compositor and Hyprland), so
+unlike `nvim/tests` this asserts nothing about behaviour — it catches the
+regressions that actually happen when editing QML: typo'd property names, a
+component that no longer exists, a bad enum, an unregistered singleton.
+
+`qmllint` can't resolve `import qs.foo` on its own, because Quickshell
+synthesises that module at runtime, so the harness mirrors the tree into a temp
+dir and generates the `qmldir` files Quickshell would have generated (marking
+every `pragma Singleton` file as a singleton).
+
+- Run: `quickshell/tests/run_tests.sh`
+- Requires `qmllint` (ships with `qt6-declarative`, at
+  `/usr/lib/qt6/bin/qmllint`; override with `QMLLINT=`).
+- The suite must stay at zero warnings. Where a warning is a false positive
+  (`PanelWindow` reported as uncreatable, Quickshell's Bluetooth types not being
+  declaratively exposed), suppress it narrowly with a
+  `// qmllint disable <check>` comment and a note on why.
+
+Fonts: the shell wants `ttf-material-symbols-variable-git` (icons — without it
+every icon renders as its literal name) and `ttf-rubik-vf` (text). Both are in
+`arch_linux/pkglist.txt`. `CaskaydiaCove NF` covers the mono font.
 
 ### AGS Bar (TypeScript)
 
@@ -97,5 +177,8 @@ When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), t
 - `hypr/modules/autostart.lua` — Programs launched on login
 - `nvim/init.lua` — Neovim entry point (auto-format on save enabled)
 - `nvim/lua/user/keymaps.lua` — Neovim keybindings
+- `quickshell/shell.qml` — Quickshell entry point
+- `quickshell/config/Appearance.qml` — M3 design tokens for the Quickshell shell
+- `quickshell/config/Config.qml` — Quickshell shell settings
 - `matugen/config.toml` — Template mapping for color generation
 - `arch_linux/pkglist.txt` — Pacman package list for system reproducibility
