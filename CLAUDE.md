@@ -14,6 +14,21 @@ Personal dotfiles for a Hyprland-based Arch Linux desktop environment. All confi
 
 The install script removes existing configs and creates symlinks. Re-run it after adding new config directories.
 
+## Tests
+
+Four suites, each documented in its own section below:
+
+```bash
+luajit hypr/tests/run_tests.lua                          # Hyprland Lua config (mocked `hl`)
+nvim --headless -u NONE -i NONE -l nvim/tests/run_tests.lua   # real headless Neovim
+quickshell/tests/run_tests.sh                            # qmllint, must stay at zero warnings
+tmux/tests/run_tests.sh                                  # real tmux server on a private socket
+```
+
+Anything touching the theming runs in **both modes**: the suites assert against
+whichever mode matugen last ran in, so a light-only run proves half of it.
+`theme-mode light && <suite> && theme-mode dark && <suite>`.
+
 ## Color Theming (Matugen)
 
 The central theming system is **Matugen** (Material Design 3 color generator). Running it regenerates color files across all apps:
@@ -53,7 +68,7 @@ them renders near-white text on a light background — and on a low-saturation
 wallpaper several of them collapse into each other. `X` and `on_X_container`
 (primary/secondary/tertiary/error) give two legible tones per hue and both flip
 with the mode. Compare candidates with
-`matugen image <wall> -m light --prefer saturation --dry-run -j hex`. A matugen
+`matugen image <wall> -m light --source-color-index <n> --dry-run -j hex`. A matugen
 palette only has four hues, so an eight-slot palette will reuse some — that's
 the palette being monochromatic, not a mapping bug.
 
@@ -77,7 +92,7 @@ Each top-level directory maps to one tool:
 - `quickshell/` — Quickshell (QML) shell in the style of [caelestia-dots/shell](https://github.com/caelestia-dots/shell); entry `shell.qml`
 - `rofi/` — App launcher; extensive theme collection in `launchers/` and `colors/`
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
-- `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`), matugen palette in `colors.conf`
+- `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`); colours from catppuccin, flavour chosen by the mode in `colors.conf`
 - `matugen/` — Theme generator config and templates
 - `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
@@ -275,6 +290,11 @@ everything here:
 The wallpaper to re-theme from is recovered from the `$image` line the hyprland
 template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded.
 
+**To re-render every template without changing mode** — what you want after
+editing a template — run `theme-mode "$(theme-mode status)"`. A bare
+`matugen image` would drag the palette to dark, and `theme-mode toggle` would
+land in the other mode.
+
 Two subcommands exist for the halves of that: `theme-mode wallpaper <image>`
 re-themes from a new wallpaper in whatever mode the desktop is already in (what
 you want instead of `matugen image`, whose `--mode` defaults to dark), and
@@ -299,10 +319,16 @@ candidate that reproduces the palette this setup already had; override with
 `MATUGEN_SOURCE_INDEX`. Compare candidates with
 `matugen image <wall> -m dark --source-color-index <n> --dry-run -j hex`.
 
-The flag is version-specific: matugen ≤3 spelled this `--prefer <saturation|…>`
-and 4.0 replaced it with `--source-color-index`, so a matugen upgrade breaks the
-toggle silently — the bar's click runs the script, the script's matugen call
-exits non-zero, and nothing on screen moves.
+The flag has moved between versions: matugen ≤3 spelled this
+`--prefer <saturation|…>`, 4.0 dropped it for `--source-color-index`, and 4.2
+accepts **both** (`matugen image --help` lists them side by side). So an upgrade
+can break the toggle silently — the bar's click runs the script, the script's
+matugen call exits non-zero, and nothing on screen moves. Check
+`matugen image --help` after upgrading rather than assuming either spelling
+survived.
+
+For this wallpaper the two agree: `--source-color-index 0` reproduces what
+`--prefer saturation` produced, so the switch moved no colours.
 
 The bar entry (`modules/bar/components/ThemeToggle.qml`, entry name
 `themeMode`) reads state from the portal key via the `Theme` service rather than
@@ -399,6 +425,9 @@ When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), t
 - `hypr/modules/autostart.lua` — Programs launched on login
 - `nvim/init.lua` — Neovim entry point (auto-format on save enabled)
 - `nvim/lua/user/keymaps.lua` — Neovim keybindings
+- `nvim/lua/user/theme.lua` — Owns the colourscheme; picks the catppuccin flavour from the desktop mode and watches for changes
+- `scripts/theme-mode` — The light/dark switch everything else hangs off
+- `tmux/.tmux.conf` — tmux config; the theming here is load-order sensitive (see Tmux Theming)
 - `quickshell/shell.qml` — Quickshell entry point
 - `quickshell/config/Appearance.qml` — M3 design tokens for the Quickshell shell
 - `quickshell/config/Config.qml` — Quickshell shell settings
