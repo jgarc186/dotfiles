@@ -80,7 +80,55 @@ theme.reload()
 A.truthy(next(hl("CursorLineBg")) ~= nil, "reload() lost the CursorLineBg override")
 A.truthy(hl("Normal").bg == nil, "reload() lost the transparent background")
 
--- 6. The watch on the generated file: what makes a running nvim re-theme with
+-- 6. Contrast. The bug that made this section necessary: matugen's base16
+-- base08-base0F are identical in light and dark mode, so a syntax palette
+-- built from them renders near-white text on a light background. Every
+-- foreground the colourscheme sets has to stay legible against the
+-- background it sets, in whichever mode matugen last ran.
+local function luminance(rgb)
+    local function channel(c)
+        c = c / 255
+        return c <= 0.03928 and c / 12.92 or ((c + 0.055) / 1.055) ^ 2.4
+    end
+    local r = channel(math.floor(rgb / 65536) % 256)
+    local g = channel(math.floor(rgb / 256) % 256)
+    local b = channel(rgb % 256)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+end
+
+local function contrast(fg, bg)
+    local l1, l2 = luminance(fg), luminance(bg)
+    if l1 < l2 then
+        l1, l2 = l2, l1
+    end
+    return (l1 + 0.05) / (l2 + 0.05)
+end
+
+-- Normal's background is cleared by the overrides, so take the colourscheme's
+-- own surface colour from the generated file — that is what the terminal
+-- underneath is themed to as well.
+local surface = H.read(generated):match("hi Normal%s+guibg=(#%x%x%x%x%x%x)")
+A.truthy(surface, "no 'hi Normal guibg=' in " .. generated)
+local surface_rgb = tonumber(surface:sub(2), 16)
+
+-- 3:1 is the WCAG floor for large/incidental text; syntax colours that fall
+-- under it are the ones that read as invisible.
+local MIN_CONTRAST = 3.0
+
+for _, group in ipairs({
+    "Identifier", "Constant", "Type", "String", "Special", "Function",
+    "Statement", "Keyword", "Comment", "Delimiter", "Operator",
+    "DiffAdd", "DiffChange", "DiffDelete", "DiagnosticError", "DiagnosticWarn",
+}) do
+    local fg = hl(group).fg
+    A.truthy(fg, group .. " sets no foreground")
+    local ratio = contrast(fg, surface_rgb)
+    A.truthy(ratio >= MIN_CONTRAST, string.format(
+        "%s is illegible in %s mode: contrast %.2f:1 against %s (need %.1f:1)",
+        group, vim.o.background, ratio, surface, MIN_CONTRAST))
+end
+
+-- 7. The watch on the generated file: what makes a running nvim re-theme with
 -- the rest of the desktop instead of needing a restart.
 A.truthy(vim.fn.filereadable(theme.colors_path()) == 1,
     "colors_path() does not point at a readable file: " .. tostring(theme.colors_path()))

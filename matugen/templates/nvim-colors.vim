@@ -3,9 +3,10 @@
 " DO NOT EDIT the output (nvim/colors/matugen.vim): it is overwritten by every
 " `matugen image` / `theme-mode` run. Edit this template instead.
 "
-" Colours are the Material 3 roles matugen emits (colors.*) for UI chrome and
-" its base16 mapping (base16.base0*) for syntax, so the editor tracks the
-" wallpaper the same way waybar, rofi and kitty do.
+" Colours are the Material 3 roles matugen emits (colors.*), so the editor
+" tracks the wallpaper the same way waybar, rofi and kitty do. The base16
+" greyscale ramp (base00-base07) is used where a tone rather than a hue is
+" wanted; base08-base0F are deliberately NOT used — see the syntax section.
 "
 " Every value is `.default`, which is whatever --mode the run used. A
 " hardcoded `.dark` renders dark colours into a light-mode run — that is the
@@ -82,40 +83,54 @@ hi ModeMsg       guibg=None guifg={{ colors.on_surface.default.hex }} gui=bold
 hi MsgArea       guibg=None guifg={{ colors.on_surface.default.hex }}
 
 " -- Syntax -----------------------------------------------------------------
-hi Comment       guibg=None guifg={{ base16.base03.default.hex }} gui=italic
+" Accents come from the M3 roles, not from base16. matugen's base08-base0F are
+" identical in light and dark mode (only base00-base07 invert), so they render
+" as near-white against a light background and several of them collapse into
+" each other against a dark one. `X` and `on_X_container` are the two legible
+" tones of one hue and both flip with the mode, which is what keeps syntax
+" readable in either. Four hues (primary/secondary/tertiary/error) for more
+" than four syntax categories means some share a colour — that is a matugen
+" palette being monochromatic by design.
+"
+" The greys below (base03/base05/base06) are the base16 ramp, which does
+" invert, so they stay correct in both modes.
+" Comments want to be dim without disappearing: base03 lands around 2:1
+" against the surface in light mode, where `outline` (M3's own low-emphasis
+" role) clears 4:1 and still reads as secondary.
+hi Comment       guibg=None guifg={{ colors.outline.default.hex }} gui=italic
 
 hi Delimiter     guibg=None guifg={{ base16.base05.default.hex }}
 hi Operator      guibg=None guifg={{ base16.base05.default.hex }}
 
 hi Todo          guibg=None guifg={{ base16.base06.default.hex }} gui=bold
 
-hi Identifier    guibg=None guifg={{ base16.base08.default.hex }}
-hi Constant      guibg=None guifg={{ base16.base09.default.hex }}
-hi Number        guibg=None guifg={{ base16.base09.default.hex }}
-hi Float         guibg=None guifg={{ base16.base09.default.hex }}
-hi Boolean       guibg=None guifg={{ base16.base09.default.hex }}
-hi Type          guibg=None guifg={{ base16.base0a.default.hex }}
-hi StorageClass  guibg=None guifg={{ base16.base0a.default.hex }}
-hi Structure     guibg=None guifg={{ base16.base0a.default.hex }}
-hi Typedef       guibg=None guifg={{ base16.base0a.default.hex }}
-hi String        guibg=None guifg={{ base16.base0b.default.hex }}
-hi Character     guibg=None guifg={{ base16.base0b.default.hex }}
-hi Special       guibg=None guifg={{ base16.base0c.default.hex }}
-hi SpecialChar   guibg=None guifg={{ base16.base0c.default.hex }}
-hi PreProc       guibg=None guifg={{ base16.base0c.default.hex }}
-hi Include       guibg=None guifg={{ base16.base0d.default.hex }}
-hi Define        guibg=None guifg={{ base16.base0e.default.hex }}
-hi Macro         guibg=None guifg={{ base16.base08.default.hex }}
-hi Function      guibg=None guifg={{ base16.base0d.default.hex }}
-hi Statement     guibg=None guifg={{ base16.base0e.default.hex }}
-hi Conditional   guibg=None guifg={{ base16.base0e.default.hex }}
-hi Repeat        guibg=None guifg={{ base16.base0e.default.hex }}
-hi Label         guibg=None guifg={{ base16.base0e.default.hex }}
-hi Keyword       guibg=None guifg={{ base16.base0e.default.hex }}
-hi Exception     guibg=None guifg={{ base16.base0e.default.hex }}
-hi Tag           guibg=None guifg={{ base16.base08.default.hex }}
-hi Debug         guibg=None guifg={{ base16.base08.default.hex }}
-hi Underlined    guibg=None guifg={{ base16.base0d.default.hex }} gui=underline
+hi Identifier    guibg=None guifg={{ colors.on_surface.default.hex }}
+hi Constant      guibg=None guifg={{ colors.tertiary.default.hex }}
+hi Number        guibg=None guifg={{ colors.tertiary.default.hex }}
+hi Float         guibg=None guifg={{ colors.tertiary.default.hex }}
+hi Boolean       guibg=None guifg={{ colors.tertiary.default.hex }}
+hi Type          guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi StorageClass  guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi Structure     guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi Typedef       guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi String        guibg=None guifg={{ colors.secondary.default.hex }}
+hi Character     guibg=None guifg={{ colors.secondary.default.hex }}
+hi Special       guibg=None guifg={{ colors.on_secondary_container.default.hex }}
+hi SpecialChar   guibg=None guifg={{ colors.on_secondary_container.default.hex }}
+hi PreProc       guibg=None guifg={{ colors.on_secondary_container.default.hex }}
+hi Include       guibg=None guifg={{ colors.primary.default.hex }}
+hi Define        guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Macro         guibg=None guifg={{ colors.error.default.hex }}
+hi Function      guibg=None guifg={{ colors.primary.default.hex }}
+hi Statement     guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Conditional   guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Repeat        guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Label         guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Keyword       guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Exception     guibg=None guifg={{ colors.on_primary_container.default.hex }}
+hi Tag           guibg=None guifg={{ colors.on_error_container.default.hex }}
+hi Debug         guibg=None guifg={{ colors.error.default.hex }}
+hi Underlined    guibg=None guifg={{ colors.primary.default.hex }} gui=underline
 hi Ignore        guibg=None guifg={{ colors.outline.default.hex }}
 
 hi Error         guibg={{ colors.error_container.default.hex }} guifg={{ colors.on_error_container.default.hex }}
@@ -125,15 +140,15 @@ hi Selection     guibg={{ base16.base02.default.hex }}
 " Most @-groups default-link to the core groups above; these are the ones
 " where the default link is too coarse to read well.
 hi @variable          guibg=None guifg={{ colors.on_surface.default.hex }}
-hi @variable.builtin  guibg=None guifg={{ base16.base08.default.hex }} gui=italic
-hi @variable.member   guibg=None guifg={{ base16.base05.default.hex }}
-hi @property          guibg=None guifg={{ base16.base05.default.hex }}
-hi @constructor       guibg=None guifg={{ base16.base0a.default.hex }}
-hi @module            guibg=None guifg={{ base16.base0a.default.hex }}
-hi @string.escape     guibg=None guifg={{ base16.base0c.default.hex }}
-hi @tag.attribute     guibg=None guifg={{ base16.base0a.default.hex }} gui=italic
-hi @markup.link       guibg=None guifg={{ base16.base0d.default.hex }} gui=underline
-hi @markup.raw        guibg=None guifg={{ base16.base0b.default.hex }}
+hi @variable.builtin  guibg=None guifg={{ colors.error.default.hex }} gui=italic
+hi @variable.member   guibg=None guifg={{ colors.on_surface_variant.default.hex }}
+hi @property          guibg=None guifg={{ colors.on_surface_variant.default.hex }}
+hi @constructor       guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi @module            guibg=None guifg={{ colors.on_tertiary_container.default.hex }}
+hi @string.escape     guibg=None guifg={{ colors.on_secondary_container.default.hex }}
+hi @tag.attribute     guibg=None guifg={{ colors.on_tertiary_container.default.hex }} gui=italic
+hi @markup.link       guibg=None guifg={{ colors.primary.default.hex }} gui=underline
+hi @markup.raw        guibg=None guifg={{ colors.secondary.default.hex }}
 hi! link @markup.heading Title
 hi! link @comment.note Todo
 
@@ -142,7 +157,7 @@ hi DiagnosticError  guibg=None guifg={{ colors.error.default.hex }}
 hi DiagnosticWarn   guibg=None guifg={{ colors.tertiary.default.hex }}
 hi DiagnosticInfo   guibg=None guifg={{ colors.primary.default.hex }}
 hi DiagnosticHint   guibg=None guifg={{ colors.secondary.default.hex }}
-hi DiagnosticOk     guibg=None guifg={{ base16.base0b.default.hex }}
+hi DiagnosticOk     guibg=None guifg={{ colors.secondary.default.hex }}
 hi DiagnosticUnderlineError  gui=undercurl guisp={{ colors.error.default.hex }}
 hi DiagnosticUnderlineWarn   gui=undercurl guisp={{ colors.tertiary.default.hex }}
 hi DiagnosticUnderlineInfo   gui=undercurl guisp={{ colors.primary.default.hex }}
@@ -156,17 +171,17 @@ hi LspInlayHint       guibg=None guifg={{ colors.outline.default.hex }} gui=ital
 " -- Diffs ------------------------------------------------------------------
 " Foreground-only: a tinted background would need a light/dark-specific blend,
 " and this file has to render correctly in both modes from one source.
-hi DiffAdd       guibg=None guifg={{ base16.base0b.default.hex }}
-hi DiffChange    guibg=None guifg={{ base16.base0d.default.hex }}
-hi DiffDelete    guibg=None guifg={{ base16.base08.default.hex }}
-hi DiffText      guibg=None guifg={{ base16.base0a.default.hex }} gui=bold
+hi DiffAdd       guibg=None guifg={{ colors.secondary.default.hex }}
+hi DiffChange    guibg=None guifg={{ colors.primary.default.hex }}
+hi DiffDelete    guibg=None guifg={{ colors.error.default.hex }}
+hi DiffText      guibg=None guifg={{ colors.on_tertiary_container.default.hex }} gui=bold
 hi! link Added   DiffAdd
 hi! link Changed DiffChange
 hi! link Removed DiffDelete
 
-hi GitSignsAdd     guibg=None guifg={{ base16.base0b.default.hex }}
-hi GitSignsChange  guibg=None guifg={{ base16.base0d.default.hex }}
-hi GitSignsDelete  guibg=None guifg={{ base16.base08.default.hex }}
+hi GitSignsAdd     guibg=None guifg={{ colors.secondary.default.hex }}
+hi GitSignsChange  guibg=None guifg={{ colors.primary.default.hex }}
+hi GitSignsDelete  guibg=None guifg={{ colors.error.default.hex }}
 
 " -- Plugins ----------------------------------------------------------------
 hi NvimTreeNormal          guibg=None guifg={{ colors.on_surface.default.hex }}
@@ -189,20 +204,23 @@ hi CmpItemMenu        guibg=None guifg={{ colors.outline.default.hex }}
 
 " -- :terminal --------------------------------------------------------------
 " Same role mapping as the kitty template, so a shell inside nvim matches a
-" shell outside it.
+" shell outside it: base16 ramp for the greys (it inverts with the mode), M3
+" roles for the hues (base08-base0F don't invert, so they wash out in light
+" mode). Four hues for ANSI's six, hence magenta/cyan reusing blue/green
+" tones swapped.
 let g:terminal_color_0  = '{{ colors.surface.default.hex }}'
-let g:terminal_color_8  = '{{ colors.surface_container_highest.default.hex }}'
-let g:terminal_color_1  = '{{ base16.base08.default.hex | lighten: -20.0 }}'
-let g:terminal_color_9  = '{{ base16.base08.default.hex | lighten: 10.0 }}'
-let g:terminal_color_2  = '{{ colors.secondary_fixed_dim.default.hex }}'
-let g:terminal_color_10 = '{{ colors.secondary_fixed.default.hex }}'
-let g:terminal_color_3  = '{{ colors.tertiary_fixed_dim.default.hex }}'
-let g:terminal_color_11 = '{{ colors.tertiary_fixed.default.hex }}'
-let g:terminal_color_4  = '{{ colors.on_primary_fixed_variant.default.hex }}'
-let g:terminal_color_12 = '{{ colors.primary.default.hex }}'
-let g:terminal_color_5  = '{{ colors.on_secondary_fixed_variant.default.hex }}'
-let g:terminal_color_13 = '{{ colors.secondary.default.hex }}'
-let g:terminal_color_6  = '{{ colors.on_tertiary_fixed_variant.default.hex }}'
-let g:terminal_color_14 = '{{ colors.tertiary.default.hex }}'
-let g:terminal_color_7  = '{{ colors.on_surface_variant.default.hex }}'
+let g:terminal_color_8  = '{{ base16.base03.default.hex }}'
+let g:terminal_color_1  = '{{ colors.error.default.hex }}'
+let g:terminal_color_9  = '{{ colors.on_error_container.default.hex }}'
+let g:terminal_color_2  = '{{ colors.secondary.default.hex }}'
+let g:terminal_color_10 = '{{ colors.on_secondary_container.default.hex }}'
+let g:terminal_color_3  = '{{ colors.tertiary.default.hex }}'
+let g:terminal_color_11 = '{{ colors.on_tertiary_container.default.hex }}'
+let g:terminal_color_4  = '{{ colors.primary.default.hex }}'
+let g:terminal_color_12 = '{{ colors.on_primary_container.default.hex }}'
+let g:terminal_color_5  = '{{ colors.on_primary_container.default.hex }}'
+let g:terminal_color_13 = '{{ colors.primary.default.hex }}'
+let g:terminal_color_6  = '{{ colors.on_secondary_container.default.hex }}'
+let g:terminal_color_14 = '{{ colors.secondary.default.hex }}'
+let g:terminal_color_7  = '{{ base16.base05.default.hex }}'
 let g:terminal_color_15 = '{{ colors.on_surface.default.hex }}'

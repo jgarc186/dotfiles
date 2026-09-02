@@ -34,6 +34,8 @@ This reads `matugen/config.toml` and writes generated color files to:
 - `kitty/themes/Matugen.conf` — Kitty theme (reloads via kitten)
 - `nvim/colors/matugen.vim` — Neovim colorscheme (a running nvim re-sources it
   itself; see Neovim Colours below)
+- `tmux/colors.conf` — tmux palette, as the `@thm_*` variables catppuccin/tmux
+  reads (sourced from `.tmux.conf`; see Tmux Theming below)
 - `quickshell/services/Scheme.qml` — Quickshell M3 palette (Quickshell hot-reloads on file change)
 
 **Never manually edit these generated files** — they are overwritten on next `matugen` run. Edit the templates in `matugen/templates/` instead.
@@ -43,6 +45,19 @@ is whatever `--mode` the run used; a hardcoded mode renders dark colours into a
 light-mode run, which is how kitty and nvim spent a while stuck on the dark
 palette while everything else followed the toggle. `{{mode}}` renders `light`
 or `dark` where a file needs to name the mode itself (nvim's `set background=`).
+
+**Use `colors.*` roles for accents, not `base16.base08`–`base0F`.** Only
+`base00`–`base07` (the greyscale ramp) invert with the mode; `base08`–`base0F`
+are byte-identical in light and dark, so a syntax or ANSI palette built from
+them renders near-white text on a light background — and on a low-saturation
+wallpaper several of them collapse into each other. `X` and `on_X_container`
+(primary/secondary/tertiary/error) give two legible tones per hue and both flip
+with the mode. Compare candidates with
+`matugen image <wall> -m light --prefer saturation --dry-run -j hex`. A matugen
+palette only has four hues, so an eight-slot palette will reuse some — that's
+the palette being monochromatic, not a mapping bug. `nvim/tests/test_theme.lua`
+and `tmux/tests/run_tests.sh` both assert a WCAG 3:1 floor against the surface,
+which is what catches this.
 
 ## Architecture
 
@@ -56,7 +71,7 @@ Each top-level directory maps to one tool:
 - `quickshell/` — Quickshell (QML) shell in the style of [caelestia-dots/shell](https://github.com/caelestia-dots/shell); entry `shell.qml`
 - `rofi/` — App launcher; extensive theme collection in `launchers/` and `colors/`
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
-- `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`)
+- `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`), matugen palette in `colors.conf`
 - `matugen/` — Theme generator config and templates
 - `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
@@ -102,8 +117,9 @@ Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. In
   - **Generated-file checks:** `test_theme` — asserts the matugen nvim template
     is mode-agnostic (`.default.hex`, `set background={{mode}}`), then applies
     `theme.lua` for real and checks the colourscheme, the overrides, that a
-    `reload()` keeps them, and that the file watch arms and re-arms without
-    leaking handles.
+    `reload()` keeps them, that every syntax foreground clears WCAG 3:1 against
+    the generated surface colour (see the accent rule under Color Theming), and
+    that the file watch arms and re-arms without leaking handles.
   - **Source checks:** `test_highlights` — greps `theme.lua`/config source for highlight-group correctness (e.g. a group DEFINED under a misspelled name silently fails to match the name other configs `highlight link` against). Catches the spelling even where the group's consumer (telescope, lualine) can't load headless.
   - **Compile check:** `test_compile` — `loadfile`s every config `.lua` (incl. per-plugin config files whose plugins aren't installed in the headless env), catching syntax regressions without executing anything.
 
@@ -271,6 +287,55 @@ The `ags/` directory is a TypeScript project with `node_modules/` and GObject In
 ### Tmux Plugins
 
 TPM and Catppuccin are git submodules under `tmux/plugins/`. To install plugins: `<prefix>I` inside tmux.
+
+### Tmux Theming
+
+`tmux/colors.conf` is matugen output that fills the `@thm_*` variables
+catppuccin/tmux v2 reads, so the bar follows the wallpaper and the light/dark
+toggle. Three things about it are load-order-sensitive, and each one silently
+half-works if got wrong:
+
+- **The variable names have to be catppuccin's own.** The template originally
+  set `@thm_primary`, `@thm_surface_low`, `@thm_bar_bg` — names this plugin
+  never reads — so the colours went nowhere and the bar stayed on mocha. Only
+  `@thm_bg`/`@thm_fg` overlapped.
+- **`colors.conf` is sourced *before* `catppuccin.tmux` runs.** catppuccin sets
+  its palette with `set -ogq` (only if unset), so whatever is already there
+  wins; the mocha flavour stays as the fallback for a fresh clone. Sourcing
+  after the run would leave the module colours catppuccin bakes at load
+  (`set -ogqF`) on catppuccin's values.
+- **A reload has to clear `@catppuccin_*` first.** Those baked options are
+  still set on a re-source, and `-ogq` won't overwrite them: `@thm_*` would
+  update while the status modules kept the old palette. `.tmux.conf` unsets
+  them via `run-shell` before re-setting its own, which is what makes both
+  `prefix r` and the matugen `post_hook` re-theme a live server.
+
+tmux has no reload signal, so the `post_hook` in `matugen/config.toml`
+re-sources `.tmux.conf` on the default socket (guarded by `tmux info`, since
+there may be no server).
+
+Palette variables only — no style statements in the generated file. The status
+line is deliberately transparent (`bg=default`) so the matugen-themed terminal
+shows through, and a `window-active-style` would make the panes opaque.
+
+### Tmux Config Tests
+
+`tmux/tests/run_tests.sh` — tmux is installed locally, so this starts a real
+server on a private socket (`-L matugen-tmux-tests-$$`) with the repo's config
+and asserts on the options it ends up with, then kills it. The rest is
+source-level.
+
+- Run: `tmux/tests/run_tests.sh` (needs `tmux`; the contrast check needs
+  `python3`, and both skip cleanly if missing).
+- Covers: the template being mode-agnostic; `[templates.tmux]` existing in
+  `matugen/config.toml` with a reload `post_hook`; `colors.conf` being sourced
+  before the catppuccin run; the template's `@thm_*` names matching the
+  plugin's exactly, in both directions; accents clearing 3:1 against
+  `@thm_bg`; and — the one that caught a real half-fix — a re-source actually
+  re-theming a baked module colour after a stale value is planted.
+- Both sides of the name comparison read `^set ` lines only. These files
+  discuss `@thm_*` names in their comments, and matching those lets a name
+  pass on a mention.
 
 ### Hyprland Lua Config + Tests
 

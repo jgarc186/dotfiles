@@ -32,6 +32,15 @@ input_path = '~/.config/matugen/templates/kitty-colors.conf'
 output_path = '~/.config/kitty/themes/Matugen.conf'
 post_hook = 'kitty +kitten themes --reload-in=all Matugen || true'
 
+[templates.tmux]
+input_path = '~/.config/matugen/templates/tmux-colors.conf'
+output_path = '~/.config/tmux/colors.conf'
+# tmux has no reload signal (no SIGUSR2, no kitten): the server has to re-read
+# the config. Re-sourcing .tmux.conf rather than colors.conf alone is what the
+# `prefix r` binding already does, and it is required — catppuccin bakes some
+# module colours at load time, so they only pick up new values on a full run.
+post_hook = 'tmux info >/dev/null 2>&1 && tmux source-file ~/.config/tmux/.tmux.conf || true'
+
 [templates.quickshell]
 input_path = '~/.config/matugen/templates/quickshell-scheme.qml'
 output_path = '~/.config/quickshell/services/Scheme.qml'
