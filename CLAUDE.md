@@ -32,8 +32,8 @@ This reads `matugen/config.toml` and writes generated color files to:
 - `rofi/colors.rasi` — Rofi colors
 - `ghostty/themes/Matugen` — Ghostty theme (sends `SIGUSR2` to reload live)
 - `kitty/themes/Matugen.conf` — Kitty theme (reloads via kitten)
-- `nvim/colors/matugen.vim` — Neovim colorscheme (a running nvim re-sources it
-  itself; see Neovim Colours below)
+- `nvim/colors/matugen.vim` — Neovim colorscheme; nvim reads the mode from it
+  and otherwise uses catppuccin (see Neovim Colours below)
 - `tmux/colors.conf` — tmux palette, as the `@thm_*` variables catppuccin/tmux
   reads (sourced from `.tmux.conf`; see Tmux Theming below)
 - `quickshell/services/Scheme.qml` — Quickshell M3 palette (Quickshell hot-reloads on file change)
@@ -55,9 +55,12 @@ wallpaper several of them collapse into each other. `X` and `on_X_container`
 with the mode. Compare candidates with
 `matugen image <wall> -m light --prefer saturation --dry-run -j hex`. A matugen
 palette only has four hues, so an eight-slot palette will reuse some — that's
-the palette being monochromatic, not a mapping bug. `nvim/tests/test_theme.lua`
-and `tmux/tests/run_tests.sh` both assert a WCAG 3:1 floor against the surface,
-which is what catches this.
+the palette being monochromatic, not a mapping bug. `tmux/tests/run_tests.sh`
+asserts a WCAG 3:1 floor against the surface, which is what catches this.
+
+The limit of that approach is why nvim doesn't use a wallpaper palette at all:
+four hues spread over a syntax palette leaves the categories reading as the
+same colour. Editors want more separation than a matugen palette carries.
 
 ## Architecture
 
@@ -79,13 +82,25 @@ Each top-level directory maps to one tool:
 
 ### Neovim Colours
 
-`nvim/lua/user/theme.lua` owns the colourscheme. No plugin sets one:
-`colors/matugen.vim` (generated) is applied at startup, with catppuccin left
-installed only as the fallback for a fresh clone that has never run matugen.
+`nvim/lua/user/theme.lua` owns the colourscheme. nvim follows the desktop's
+**light/dark mode**, not its wallpaper palette: catppuccin latte in light,
+mocha in dark. A generated matugen colourscheme was tried first and read badly
+— four hues over a whole syntax palette collapses the categories together — so
+it now serves two smaller jobs:
 
-`Normal` is deliberately transparent, so the terminal — also matugen-themed —
-shows through. That is why a stale kitty palette used to read as "nvim's
-background doesn't follow the theme".
+- **The mode signal.** `colors/matugen.vim` carries `set background=<mode>` from
+  the run that wrote it; `theme.lua` greps that rather than trusting
+  `vim.o.background`, which any plugin can change.
+- **The fallback scheme**, if catppuccin isn't installed yet.
+
+`Normal` is deliberately transparent, so the terminal — matugen-themed —
+shows through. Two traps live there, both hit in practice:
+
+- `nvim_set_hl` replaces a group outright, so clearing the background also
+  drops the flavour's foreground unless it is carried over explicitly.
+- catppuccin gives `NvimTreeNormal` an opaque background, which paints a solid
+  slab over the transparent editor whenever the tree is open. The overrides
+  clear it, along with `NvimTreeNormalNC`/`NvimTreeEndOfBuffer`.
 
 nvim has no signal to reload a colourscheme (unlike waybar's `SIGUSR2` or
 kitty's themes kitten), so instead of a `post_hook` in `matugen/config.toml`
@@ -93,13 +108,20 @@ the config watches the generated file with a `vim.uv` fs_event. That also
 catches a `matugen image` run by hand, which no hook of ours would see. Two
 things shape that code, both found by running it:
 
-- Re-sourcing a colourscheme clears everything set on top of it, so the local
+- Applying a colourscheme clears everything set on top of it, so the local
   overrides (transparency, plus the derived `FloatBorder`/`CursorLineBg`/
   `StatusLineNonText` groups other configs link to) hang off a `ColorScheme`
-  autocmd rather than running once at startup.
+  autocmd rather than running once at startup. The autocmd's pattern is `*`,
+  since the scheme applied changes with the mode.
 - A writer that replaces the file rather than truncating it leaves the watch on
   a dead inode, so the watch re-arms after every event. Events are debounced
   50ms, since matugen writes in several chunks.
+
+**Config changes only reach newly started nvim.** A long-running session keeps
+the colourscheme — and the absence of the watch — it started with, which shows
+up as a session that is half-themed (transparent editor over the new terminal
+colours, but an opaque tree pane from the old scheme). Re-theme one in place
+with `:lua package.loaded['user/theme'] = nil; require('user/theme').setup()`.
 
 ### Neovim Plugin Management
 
@@ -116,10 +138,11 @@ Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. In
   - **Spec validation:** `test_plugins_spec` — mocks `require('lazy')` to capture the spec (no plugin install), checks for duplicate repos, valid `owner/repo` ids, and that every `require('user/plugins/X')` target file exists.
   - **Generated-file checks:** `test_theme` — asserts the matugen nvim template
     is mode-agnostic (`.default.hex`, `set background={{mode}}`), then applies
-    `theme.lua` for real and checks the colourscheme, the overrides, that a
-    `reload()` keeps them, that every syntax foreground clears WCAG 3:1 against
-    the generated surface colour (see the accent rule under Color Theming), and
-    that the file watch arms and re-arms without leaking handles.
+    `theme.lua` for real and checks that the flavour follows the generated mode
+    (latte/mocha), the overrides, that a `reload()` keeps them, that syntax
+    stays legible against the terminal surface — a tripwire for the flavour
+    being on the wrong side of the mode, not an audit of catppuccin's palette —
+    and that the file watch arms and re-arms without leaking handles.
   - **Source checks:** `test_highlights` — greps `theme.lua`/config source for highlight-group correctness (e.g. a group DEFINED under a misspelled name silently fails to match the name other configs `highlight link` against). Catches the spelling even where the group's consumer (telescope, lualine) can't load headless.
   - **Compile check:** `test_compile` — `loadfile`s every config `.lua` (incl. per-plugin config files whose plugins aren't installed in the headless env), catching syntax regressions without executing anything.
 

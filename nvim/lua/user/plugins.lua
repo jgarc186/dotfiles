@@ -24,10 +24,8 @@ require('user/keymaps')
 require("lazy").setup({
 
     -- Themes
-    -- No colorscheme is set here: lua/user/theme.lua owns that, and loads the
-    -- matugen-generated palette so nvim tracks the rest of the desktop.
-    -- catppuccin stays installed as the fallback theme.lua uses when
-    -- colors/matugen.vim doesn't exist yet (fresh clone, no matugen run).
+    -- No colorscheme is set here: lua/user/theme.lua owns that, and picks the
+    -- flavour from the desktop's light/dark mode — latte or mocha.
     {
         'catppuccin/nvim',
         name = 'catppuccin',

@@ -1,15 +1,16 @@
--- Real-state test for the matugen theme wiring.
+-- Real-state test for the theme wiring (lua/user/theme.lua).
 --
--- Two separate things fail here, in different ways:
+-- nvim follows the desktop's light/dark mode with a catppuccin flavour — latte
+-- or mocha — rather than the wallpaper palette. The mode comes out of the
+-- `set background=` line in the generated colors/matugen.vim, so the checks
+-- run in two parts:
 --
---   * The template can silently pin one mode. Every other matugen template
---     uses `.default.hex` — whatever `--mode` the run used — while this one
---     shipped with `.dark.hex`, so a light-mode run rendered dark colours and
---     the editor stopped matching the rest of the desktop. That's the bug this
---     file was written for.
---   * lua/user/theme.lua has to apply the colourscheme AND re-apply the local
---     overrides afterwards: re-sourcing a colourscheme (which the file watcher
---     does on every matugen run) clears anything set on top of it.
+--   * the generated file has to keep carrying an honest mode. Its template can
+--     silently pin one (`.dark.hex`, the bug it shipped with), which would
+--     leave the editor a mode behind the rest of the desktop.
+--   * theme.lua has to map that mode to a flavour, apply it, and re-apply the
+--     local overrides afterwards: applying a colourscheme (which the file
+--     watcher does on every matugen run) clears anything set on top of it.
 local A = require("support.assert_util")
 local H = require("support.harness")
 
@@ -43,18 +44,41 @@ A.contains(H.read(generated), "let g:colors_name",
     generated .. " is stale (no g:colors_name) — re-run matugen")
 
 -- 3. theme.lua, against real vim state. The repo's nvim/ has to be on the
--- runtimepath for `:colorscheme matugen` to resolve (headless runs with -u NONE).
+-- runtimepath for the fallback `:colorscheme matugen` to resolve, and the
+-- plugin dir for the catppuccin flavours (headless runs with -u NONE).
 vim.opt.rtp:prepend(H.root:gsub("/$", ""))
+
+local catppuccin = vim.fn.stdpath("data") .. "/lazy/catppuccin"
+local have_catppuccin = vim.fn.isdirectory(catppuccin) == 1
+if have_catppuccin then
+    vim.opt.rtp:prepend(catppuccin)
+end
 
 local theme = H.dofile("lua/user/theme.lua")
 A.equal(type(theme.setup), "function", "theme.lua must return a module with setup()")
 
+-- The mode has to come from the generated file, not from vim.o.background:
+-- that is the value the watcher fires on, and the one the desktop shares.
+local file_mode = H.read(generated):match("set background=(%a+)")
+A.equal(theme.mode(), file_mode, "mode() disagrees with " .. generated)
+A.equal(theme.flavours.light, "catppuccin-latte", "light mode must use latte")
+A.equal(theme.flavours.dark, "catppuccin-mocha", "dark mode must use mocha")
+A.equal(theme.flavour(), theme.flavours[file_mode],
+    "flavour() does not follow the generated mode")
+
 theme.setup()
 
-A.equal(vim.g.colors_name, "matugen", "setup() did not apply the matugen colourscheme")
+if have_catppuccin then
+    A.equal(vim.g.colors_name, theme.flavours[file_mode],
+        "setup() did not apply the flavour for " .. file_mode .. " mode")
+else
+    -- Without the plugin installed, reload() must still land on something.
+    A.equal(vim.g.colors_name, "matugen",
+        "setup() did not fall back to the generated colourscheme")
+end
 
--- The generated palette is mode-aware, so 'background' must have come from it.
-A.truthy(vim.o.background == "dark" or vim.o.background == "light", "background unset")
+A.truthy(vim.o.background == file_mode,
+    "'background' is " .. vim.o.background .. ", expected " .. file_mode)
 
 -- 4. The local overrides. Other configs link to these names (telescope.lua ->
 -- CursorLineBg, lualine.lua -> StatusLineNonText), so a rename here silently
@@ -64,9 +88,19 @@ local function hl(name)
 end
 
 A.truthy(hl("Normal").bg == nil, "Normal must stay transparent (bg=none)")
+-- nvim_set_hl replaces a group outright, so clearing the background is where
+-- the flavour's text colour gets dropped by accident.
+A.truthy(hl("Normal").fg ~= nil, "Normal lost its foreground when bg was cleared")
 
 for _, group in ipairs({ "FloatBorder", "CursorLineBg", "StatusLineNonText" }) do
     A.truthy(next(hl(group)) ~= nil, "override group " .. group .. " not defined")
+end
+
+-- catppuccin gives the tree an opaque background, which paints a slab over the
+-- transparent editor whenever the tree is open — the exact symptom that made
+-- an old session look half-dark.
+for _, group in ipairs({ "NvimTreeNormal", "NvimTreeNormalNC" }) do
+    A.truthy(hl(group).bg == nil, group .. " must be transparent, not opaque")
 end
 
 -- 5. Overrides must survive a re-source, which is the whole point of hanging
@@ -80,11 +114,10 @@ theme.reload()
 A.truthy(next(hl("CursorLineBg")) ~= nil, "reload() lost the CursorLineBg override")
 A.truthy(hl("Normal").bg == nil, "reload() lost the transparent background")
 
--- 6. Contrast. The bug that made this section necessary: matugen's base16
--- base08-base0F are identical in light and dark mode, so a syntax palette
--- built from them renders near-white text on a light background. Every
--- foreground the colourscheme sets has to stay legible against the
--- background it sets, in whichever mode matugen last ran.
+-- 6. Contrast. Normal is transparent, so syntax is read against the terminal's
+-- background, which matugen themes to the same surface it writes into the
+-- generated colourscheme. A flavour on the wrong side of the mode (mocha over
+-- a light terminal) fails here, which is the failure this section is for.
 local function luminance(rgb)
     local function channel(c)
         c = c / 255
@@ -111,14 +144,20 @@ local surface = H.read(generated):match("hi Normal%s+guibg=(#%x%x%x%x%x%x)")
 A.truthy(surface, "no 'hi Normal guibg=' in " .. generated)
 local surface_rgb = tonumber(surface:sub(2), 16)
 
--- 3:1 is the WCAG floor for large/incidental text; syntax colours that fall
--- under it are the ones that read as invisible.
-local MIN_CONTRAST = 3.0
+-- A tripwire for the flavour being on the wrong side of the mode, not an audit
+-- of catppuccin's palette: mocha's text over a light terminal measures about
+-- 1.2:1, while latte's own paler accents sit as low as 2.8:1 by design. The
+-- floor is set below catppuccin and far above a mismatch.
+local MIN_CONTRAST = 2.0
 
+-- Comment is left out on purpose: catppuccin draws it at roughly 2.5:1 in
+-- both flavours, and its own design call is not ours to override. The Diff*
+-- groups are out because catppuccin tints them by background, with no
+-- foreground to measure.
 for _, group in ipairs({
     "Identifier", "Constant", "Type", "String", "Special", "Function",
-    "Statement", "Keyword", "Comment", "Delimiter", "Operator",
-    "DiffAdd", "DiffChange", "DiffDelete", "DiagnosticError", "DiagnosticWarn",
+    "Statement", "Keyword", "Delimiter", "Operator",
+    "DiagnosticError", "DiagnosticWarn", "DiagnosticHint",
 }) do
     local fg = hl(group).fg
     A.truthy(fg, group .. " sets no foreground")
