@@ -252,7 +252,9 @@ every icon renders as its literal name) and `ttf-rubik-vf` (text). Both are in
 ### Light/Dark Mode
 
 `scripts/theme-mode [light|dark|toggle|status]` (symlinked to
-`~/.local/bin/theme-mode`) switches the desktop. There is no single light/dark
+`~/.local/bin/theme-mode` by `./install` — the bar calls it by that absolute
+path, so a tree that hasn't been re-installed since the script was added has a
+toggle that does nothing) switches the desktop. There is no single light/dark
 switch on Linux, so it drives the three layers that between them cover
 everything here:
 
@@ -263,8 +265,12 @@ everything here:
    `org.freedesktop.appearance`. Firefox, Chromium, Electron and GTK4/libadwaita
    read it and switch live.
 3. `gsettings … gtk-theme` — GTK3 apps, which predate the portal. The script
-   swaps the `-Light`/`-Dark` suffix on whatever theme is set rather than
-   hardcoding one, and leaves it alone if the variant isn't installed.
+   swaps the variant of whatever theme is set rather than hardcoding one, and
+   leaves it alone if the other variant isn't installed. There is no single
+   naming convention — most themes suffix both variants (`Materia-Light` /
+   `Materia-Dark`) while `adw-gtk3`, the one on this machine, leaves the light
+   one unsuffixed (`adw-gtk3` / `adw-gtk3-dark`), and the casing varies — so
+   each mode tries a list of candidates and takes the first one installed.
 
 The wallpaper to re-theme from is recovered from the `$image` line the hyprland
 template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded.
@@ -284,13 +290,19 @@ and, for the palette, the **startup status read** rather than a change handler:
 rewriting `Scheme.qml` reloads the config, so the singleton that would have seen
 `Colours.light` change no longer exists by the time it does.
 
-**`--prefer` is not optional.** When an image yields several candidate source
-colours, matugen asks which to use, and *aborts* rather than guessing when it
-can't find a terminal to ask in — which is every invocation that isn't a human
-at a shell, the bar button included. The script passes `--prefer saturation`,
-the value that reproduces the palette this setup already had; override with
-`MATUGEN_PREFER`. Compare candidates with
-`matugen image <wall> -m dark --prefer <x> --dry-run -j hex`.
+**Answering matugen's source-colour question up front is not optional.** When
+an image yields several candidate source colours, matugen asks which to use, and
+*aborts* (`IO error: not a terminal`) rather than guessing when it can't find a
+terminal to ask in — which is every invocation that isn't a human at a shell,
+the bar button included. The script passes `--source-color-index 0`, the
+candidate that reproduces the palette this setup already had; override with
+`MATUGEN_SOURCE_INDEX`. Compare candidates with
+`matugen image <wall> -m dark --source-color-index <n> --dry-run -j hex`.
+
+The flag is version-specific: matugen ≤3 spelled this `--prefer <saturation|…>`
+and 4.0 replaced it with `--source-color-index`, so a matugen upgrade breaks the
+toggle silently — the bar's click runs the script, the script's matugen call
+exits non-zero, and nothing on screen moves.
 
 The bar entry (`modules/bar/components/ThemeToggle.qml`, entry name
 `themeMode`) reads state from the portal key via the `Theme` service rather than

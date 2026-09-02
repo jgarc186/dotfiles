@@ -22,8 +22,8 @@
 # --mode defaults to dark, so a bare run drags the palette to dark and leaves
 # the other two layers where they were.
 #
-# Set MATUGEN_PREFER to change how matugen picks a source colour from the
-# wallpaper - see --prefer in `matugen image --help` for the choices.
+# Set MATUGEN_SOURCE_INDEX to pick a different candidate source colour out of
+# the wallpaper - see --source-color-index in `matugen image --help`.
 #
 set -euo pipefail
 
@@ -31,12 +31,15 @@ IFACE="org.gnome.desktop.interface"
 COLORS="${HOME}/.config/hypr/colors.conf"
 
 # When an image yields several candidate source colours, matugen asks which to
-# use - and aborts outright rather than guessing if it can't find a terminal to
-# ask in, which is every invocation that isn't a human at a shell. Passing a
-# preference is what makes this runnable from the bar or a keybind at all.
+# use - and aborts outright ("IO error: not a terminal") rather than guessing if
+# it can't find a terminal to ask in, which is every invocation that isn't a
+# human at a shell. Answering the question up front is what makes this runnable
+# from the bar or a keybind at all.
 #
-# "saturation" is the one that reproduces the palette this setup already had.
-PREFER="${MATUGEN_PREFER:-saturation}"
+# 0 is the candidate that reproduces the palette this setup already had. Compare
+# the others with:
+#   matugen image <wall> -m dark --source-color-index <n> --dry-run -j hex
+SOURCE_INDEX="${MATUGEN_SOURCE_INDEX:-0}"
 
 die() {
     echo "theme-mode: $*" >&2
@@ -67,26 +70,42 @@ current_wallpaper() {
     echo "$image"
 }
 
-# Swap the light/dark suffix on whatever GTK3 theme is set rather than
+# Swap the light/dark variant of whatever GTK3 theme is set rather than
 # hardcoding one, so changing themes doesn't mean editing this script. Left
 # alone if the matching variant isn't installed.
+#
+# There is no one naming convention: Adwaita and most third-party themes suffix
+# both variants (Materia-Light / Materia-Dark), while adw-gtk3 - the one this
+# machine uses - names the light variant with no suffix at all (adw-gtk3 /
+# adw-gtk3-dark). Casing varies too. So each mode gets a list of candidates,
+# most explicit first, and the first one installed wins.
+installed_theme() {
+    local name
+    for name; do
+        if [[ -d /usr/share/themes/$name || -d $HOME/.themes/$name ]]; then
+            echo "$name"
+            return 0
+        fi
+    done
+    return 1
+}
+
 gtk_theme_for() {
-    local mode=$1 current base want
+    local mode=$1 current base
     current="$(gsettings get "$IFACE" gtk-theme | tr -d \')"
-    base="${current%-Light}"
-    base="${base%-Dark}"
+    # Case-insensitively, since the suffix is capitalised on some themes and
+    # not on others
+    base="$(shopt -s nocasematch; [[ $current =~ ^(.*)-(light|dark)$ ]] && echo "${BASH_REMATCH[1]}" || echo "$current")"
 
-    [[ $mode == light ]] && want="${base}-Light" || want="${base}-Dark"
-
-    if [[ -d /usr/share/themes/$want || -d $HOME/.themes/$want ]]; then
-        echo "$want"
+    if [[ $mode == light ]]; then
+        installed_theme "${base}-Light" "${base}-light" "$base" || echo "$current"
     else
-        echo "$current"
+        installed_theme "${base}-Dark" "${base}-dark" || echo "$current"
     fi
 }
 
 retheme() {
-    matugen image "$1" --mode "$2" --prefer "$PREFER"
+    matugen image "$1" --mode "$2" --source-color-index "$SOURCE_INDEX"
 }
 
 # Layers 2 and 3. Split out because the palette can move on its own - a matugen
