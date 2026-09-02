@@ -24,34 +24,15 @@ require('user/keymaps')
 require("lazy").setup({
 
     -- Themes
+    -- No colorscheme is set here: lua/user/theme.lua owns that, and loads the
+    -- matugen-generated palette so nvim tracks the rest of the desktop.
+    -- catppuccin stays installed as the fallback theme.lua uses when
+    -- colors/matugen.vim doesn't exist yet (fresh clone, no matugen run).
     {
         'catppuccin/nvim',
-        as = 'catppuccin',
-        config = function()
-            -- options: latte, frappe, macchiato, mocha
-           vim.cmd('colorscheme catppuccin-mocha')
-
-           -- Set the background to transparent
-            vim.api.nvim_set_hl(0, 'Normal', { bg = 'none' })
-
-            vim.api.nvim_set_hl(0, 'FloatBorder', {
-                fg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
-                bg = vim.api.nvim_get_hl_by_name('NormalFloat', true).background,
-            })
-
-            -- Make the cursor line invisible
-            vim.api.nvim_set_hl(0, 'CursorLineBg', {
-                fg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
-               bg = vim.api.nvim_get_hl_by_name('CursorLine', true).background,
-            })
-            
-            vim.api.nvim_set_hl(0, 'StatusLineNonText', {
-                fg = vim.api.nvim_get_hl_by_name('NonText', true).foreground,
-                bg = vim.api.nvim_get_hl_by_name('StatusLine', true).background,
-            })
-
-            vim.api.nvim_set_hl(0, 'NvimTreeIndentMarker', { fg = '#30323E' })
-        end,
+        name = 'catppuccin',
+        lazy = false,
+        priority = 1000,
     },
 
     -- Commenting support

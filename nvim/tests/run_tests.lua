@@ -22,6 +22,7 @@ local tests = {
     "test_keymaps",       -- real keymaps + leader
     "test_init",          -- format-on-save autocmd
     "test_highlights",    -- custom highlight group names (source-level)
+    "test_theme",         -- matugen colourscheme: template, apply, reload, watch
     "test_plugins_spec",  -- lazy spec validation (no plugin install)
 }
 

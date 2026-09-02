@@ -32,10 +32,17 @@ This reads `matugen/config.toml` and writes generated color files to:
 - `rofi/colors.rasi` — Rofi colors
 - `ghostty/themes/Matugen` — Ghostty theme (sends `SIGUSR2` to reload live)
 - `kitty/themes/Matugen.conf` — Kitty theme (reloads via kitten)
-- `nvim/colors/matugen.vim` — Neovim colorscheme
+- `nvim/colors/matugen.vim` — Neovim colorscheme (a running nvim re-sources it
+  itself; see Neovim Colours below)
 - `quickshell/services/Scheme.qml` — Quickshell M3 palette (Quickshell hot-reloads on file change)
 
 **Never manually edit these generated files** — they are overwritten on next `matugen` run. Edit the templates in `matugen/templates/` instead.
+
+**Templates must read `.default.hex`, never `.dark.hex`/`.light.hex`.** `default`
+is whatever `--mode` the run used; a hardcoded mode renders dark colours into a
+light-mode run, which is how kitty and nvim spent a while stuck on the dark
+palette while everything else followed the toggle. `{{mode}}` renders `light`
+or `dark` where a file needs to name the mode itself (nvim's `set background=`).
 
 ## Architecture
 
@@ -55,6 +62,30 @@ Each top-level directory maps to one tool:
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
 - `starship/starship.toml` — Shell prompt (Catppuccin Mocha palette)
 
+### Neovim Colours
+
+`nvim/lua/user/theme.lua` owns the colourscheme. No plugin sets one:
+`colors/matugen.vim` (generated) is applied at startup, with catppuccin left
+installed only as the fallback for a fresh clone that has never run matugen.
+
+`Normal` is deliberately transparent, so the terminal — also matugen-themed —
+shows through. That is why a stale kitty palette used to read as "nvim's
+background doesn't follow the theme".
+
+nvim has no signal to reload a colourscheme (unlike waybar's `SIGUSR2` or
+kitty's themes kitten), so instead of a `post_hook` in `matugen/config.toml`
+the config watches the generated file with a `vim.uv` fs_event. That also
+catches a `matugen image` run by hand, which no hook of ours would see. Two
+things shape that code, both found by running it:
+
+- Re-sourcing a colourscheme clears everything set on top of it, so the local
+  overrides (transparency, plus the derived `FloatBorder`/`CursorLineBg`/
+  `StatusLineNonText` groups other configs link to) hang off a `ColorScheme`
+  autocmd rather than running once at startup.
+- A writer that replaces the file rather than truncating it leaves the watch on
+  a dead inode, so the watch re-arms after every event. Events are debounced
+  50ms, since matugen writes in several chunks.
+
 ### Neovim Plugin Management
 
 Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. Individual plugin configurations live in `nvim/lua/user/plugins/`. Lock file: `nvim/lazy-lock.json`.
@@ -68,7 +99,12 @@ Plugins are declared in `nvim/lua/user/plugins.lua` and managed by Lazy.nvim. In
 - `nvim/tests/test_*.lua` — one concern each, in tiers:
   - **Real state:** `test_options`, `test_keymaps`, `test_init` — `dofile` the module, assert resulting `vim.o` / keymaps / autocmds.
   - **Spec validation:** `test_plugins_spec` — mocks `require('lazy')` to capture the spec (no plugin install), checks for duplicate repos, valid `owner/repo` ids, and that every `require('user/plugins/X')` target file exists.
-  - **Source checks:** `test_highlights` — greps `plugins.lua`/config source for highlight-group correctness (e.g. a group DEFINED under a misspelled name silently fails to match the name other configs `highlight link` against). Used when the code can't run headless (catppuccin's config only runs once the plugin loads).
+  - **Generated-file checks:** `test_theme` — asserts the matugen nvim template
+    is mode-agnostic (`.default.hex`, `set background={{mode}}`), then applies
+    `theme.lua` for real and checks the colourscheme, the overrides, that a
+    `reload()` keeps them, and that the file watch arms and re-arms without
+    leaking handles.
+  - **Source checks:** `test_highlights` — greps `theme.lua`/config source for highlight-group correctness (e.g. a group DEFINED under a misspelled name silently fails to match the name other configs `highlight link` against). Catches the spelling even where the group's consumer (telescope, lualine) can't load headless.
   - **Compile check:** `test_compile` — `loadfile`s every config `.lua` (incl. per-plugin config files whose plugins aren't installed in the headless env), catching syntax regressions without executing anything.
 
 When editing an `nvim/lua/**` file: update its test first (red), then the config (green). Per-plugin config files (`lua/user/plugins/*.lua`) require their plugins at runtime, so they're only compile-checked, not executed. A passing suite doesn't replace opening real Neovim — it guarantees the config is structurally correct and the owned options/keymaps/spec are intact.

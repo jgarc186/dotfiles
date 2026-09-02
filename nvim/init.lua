@@ -1,6 +1,10 @@
 require('user/plugins')
 require('user/options')
 
+-- Colours come from matugen, shared with the rest of the desktop; this also
+-- watches the generated palette so a light/dark switch reaches a running nvim.
+require('user/theme').setup()
+
 vim.o.termsync = false
 
 -- Auto format on save
