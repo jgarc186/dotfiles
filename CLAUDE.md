@@ -88,7 +88,6 @@ Each top-level directory maps to one tool:
 - `hypr/` — Hyprland WM; entry point `hypr/hyprland.lua` (Hyprland 0.55+ Lua config, `hl.*` API), modular config split across `hypr/modules/*.lua` (binds, monitors, autostart, animations, input, workspaces, etc.). Legacy hyprlang `hyprland.conf`/`modules/*.conf` have been removed — fully migrated. `hyprlock.conf` and `hyprsunset.conf` are separate tools still on hyprlang, unaffected by this migration.
 - `nvim/` — Neovim; entry point `init.lua`, plugins via Lazy.nvim, per-plugin configs in `lua/user/plugins/`
 - `waybar/` — Status bar; layout in `config.jsonc`, styling in `style.css`
-- `ags/` — TypeScript/TSX custom bar (superseded by `quickshell/`); entry `app.tsx`
 - `quickshell/` — Quickshell (QML) shell in the style of [caelestia-dots/shell](https://github.com/caelestia-dots/shell); entry `shell.qml`
 - `rofi/` — App launcher; extensive theme collection in `launchers/` and `colors/`
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
@@ -343,10 +342,6 @@ on screen to move. Two things fight that, both found by running it: rewriting
 status `Process` also runs at construction, so its answer — taken before the
 script reaches its gsettings writes — lands on top of the optimistic value
 unless it is guarded by `busy`.
-
-### AGS Bar (TypeScript)
-
-The `ags/` directory is a TypeScript project with `node_modules/` and GObject Introspection type definitions in `ags/@girs/`. It uses TSX components and targets GTK4 via the AGS framework.
 
 ### Tmux Plugins
 
