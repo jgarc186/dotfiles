@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 #
-# Regression tests for the tmux config's matugen theming.
+# Regression tests for the tmux config's theming.
+#
+# tmux follows the desktop's light/dark mode with a catppuccin flavour - latte
+# or mocha - the same way nvim does. matugen writes only the mode into
+# tmux/colors.conf; .tmux.conf turns that into @catppuccin_flavor, and the
+# plugin supplies every colour.
 #
 # tmux is present locally (unlike Hyprland/Wayland), so the last section runs a
-# real tmux server on a private socket with the repo's own config and asserts on
-# the options it ends up with. The earlier sections are source-level, guarding
-# the three ways this wiring has actually broken:
+# real server on a private socket with the repo's own config and asserts on the
+# options it ends up with. The earlier sections are source-level, guarding the
+# ways this wiring has actually broken:
 #
-#   1. the template pinning one mode (`.dark.hex`), so a light-mode run writes
-#      dark colours - the bug kitty and nvim shipped with;
-#   2. the generated file being orphaned - no [templates.tmux] in
+#   1. the generated file being orphaned - no [templates.tmux] in
 #      matugen/config.toml, nothing sourcing colors.conf - which is the state
 #      tmux was in;
-#   3. the template setting @thm_* names the catppuccin plugin doesn't read, so
-#      the colours land in variables nothing consumes.
+#   2. the mode being read after catppuccin has already loaded, leaving the
+#      flavour a mode behind;
+#   3. a reload leaving the previous flavour's baked module colours in place,
+#      which makes a live re-theme look half-applied.
 #
 # Run: tmux/tests/run_tests.sh
 set -uo pipefail
@@ -23,7 +28,7 @@ TEMPLATE="$ROOT/matugen/templates/tmux-colors.conf"
 GENERATED="$ROOT/tmux/colors.conf"
 CONF="$ROOT/tmux/.tmux.conf"
 MATUGEN_CONF="$ROOT/matugen/config.toml"
-THEME="$ROOT/tmux/plugins/catppuccin/tmux/themes/catppuccin_mocha_tmux.conf"
+THEMES="$ROOT/tmux/plugins/catppuccin/tmux/themes"
 
 passed=0
 failed=0
@@ -39,7 +44,7 @@ fail() {
     [[ $# -gt 1 ]] && printf '      %s\n' "$2"
 }
 
-check() { # name, condition-output (empty = pass), detail
+check() { # name, detail (empty = pass)
     if [[ -z $2 ]]; then
         pass "$1"
     else
@@ -47,11 +52,26 @@ check() { # name, condition-output (empty = pass), detail
     fi
 }
 
-# --- 1. Template is mode-agnostic ------------------------------------------
-# `default` is whatever --mode the run used; a hardcoded mode renders the wrong
-# palette into half the desktop's files.
-bad_mode="$(grep -n '\.\(dark\|light\)\.hex' "$TEMPLATE" || true)"
-check "template uses .default.hex only" "$bad_mode"
+# --- 1. The template carries the mode, and only the mode -------------------
+# It used to render a whole @thm_* palette from the wallpaper. Those names are
+# catppuccin's own, so any left behind would fight the flavour rather than be
+# ignored.
+detail=""
+grep -q '{{mode}}' "$TEMPLATE" || detail="template never renders {{mode}}"
+check "template renders the matugen mode" "$detail"
+
+detail=""
+grep -q '^set -gq @theme_mode' "$TEMPLATE" || detail="template does not set @theme_mode"
+check "template sets @theme_mode" "$detail"
+
+leftovers="$(grep -v '^[[:space:]]*#' "$TEMPLATE" | grep -o '@thm_[a-z0-9_]*' | sort -u | tr '\n' ' ')"
+check "template sets no @thm_* of its own" \
+    "${leftovers:+would override the flavour: $leftovers}"
+
+# matugen's engine has no conditionals - `{% if %}` renders verbatim - so a
+# flavour name here would be a literal, not a choice.
+strays="$(grep -v '^[[:space:]]*#' "$TEMPLATE" | grep -n 'latte\|mocha\|{%' || true)"
+check "template leaves the flavour choice to tmux" "$strays"
 
 # --- 2. The generated file is actually wired up ----------------------------
 tmux_block="$(sed -n '/^\[templates\.tmux\]/,/^\[/p' "$MATUGEN_CONF")"
@@ -72,93 +92,35 @@ else
 
     # tmux has no reload signal; the server has to be told to re-read the config.
     detail=""
-    grep -q "post_hook" <<<"$tmux_block" || detail="no post_hook - a running tmux server would keep the old colours"
+    grep -q "post_hook" <<<"$tmux_block" || detail="no post_hook - a running tmux server would keep the old flavour"
     check "  post_hook reloads the server" "$detail"
 fi
 
-# --- 3. Sourced before the catppuccin plugin run ---------------------------
-# catppuccin sets its palette with `set -ogq` (only if unset) and bakes some
-# module colours at load time with -ogqF, so the matugen values have to already
-# be in place when it runs. Sourcing afterwards leaves the baked ones wrong.
+# --- 3. Mode read, then mapped, then the plugin runs -----------------------
+# catppuccin reads @catppuccin_flavor at load time, so both steps have to
+# happen before the run line or the flavour is a mode behind.
 src_line="$(grep -n 'colors\.conf' "$CONF" | head -1 | cut -d: -f1)"
+map_line="$(grep -n '@theme_mode' "$CONF" | grep -v 'colors\.conf' | head -1 | cut -d: -f1)"
 run_line="$(grep -n 'catppuccin\.tmux' "$CONF" | head -1 | cut -d: -f1)"
 
-if [[ -z $src_line ]]; then
-    fail ".tmux.conf sources colors.conf" "colors.conf is never sourced - the generated palette is dead weight"
-elif [[ -z $run_line ]]; then
-    fail ".tmux.conf sources colors.conf" "no catppuccin.tmux run line found to order against"
-elif ((src_line < run_line)); then
-    pass ".tmux.conf sources colors.conf before the catppuccin run"
+if [[ -z $src_line || -z $map_line || -z $run_line ]]; then
+    fail ".tmux.conf sources the mode, maps it, then runs catppuccin" \
+        "missing step (source=$src_line map=$map_line run=$run_line)"
+elif ((src_line < map_line && map_line < run_line)); then
+    pass ".tmux.conf sources the mode, maps it, then runs catppuccin"
 else
-    fail ".tmux.conf sources colors.conf before the catppuccin run" \
-        "sourced at line $src_line, catppuccin runs at line $run_line - the -ogqF module colours are already baked by then"
+    fail ".tmux.conf sources the mode, maps it, then runs catppuccin" \
+        "out of order: source=$src_line map=$map_line run=$run_line"
 fi
 
-# --- 4. Every palette name catppuccin reads is set -------------------------
-# The template shipped setting @thm_primary / @thm_surface_low / @thm_bar_bg,
-# none of which this plugin reads: the colours went into variables nothing
-# consumed, leaving the bar on catppuccin mocha.
-# Both sides are read from `set` lines only: these files discuss @thm_* names
-# in their comments, and matching those would let a name pass on a mention.
-template_sets() { grep '^set ' "$TEMPLATE" | grep -o '@thm_[a-z0-9_]*' | sort -u; }
-plugin_sets() { grep '^set ' "$THEME" | grep -o '@thm_[a-z0-9_]*' | sort -u; }
+# Both arms have to exist: the live checks below only exercise whichever mode
+# the desktop happens to be in right now.
+detail=""
+grep -q 'latte' "$CONF" || detail+="no latte mapping "
+grep -q 'mocha' "$CONF" || detail+="no mocha mapping "
+check "both flavours are mapped" "$detail"
 
-if [[ -r $THEME ]]; then
-    missing="$(comm -23 <(plugin_sets) <(template_sets) | tr '\n' ' ')"
-    check "template sets every @thm_* the plugin defines" \
-        "${missing:+not set by the template: $missing}"
-
-    unused="$(comm -13 <(plugin_sets) <(template_sets) | tr '\n' ' ')"
-    check "template sets no @thm_* the plugin ignores" \
-        "${unused:+set but never read: $unused}"
-else
-    printf 'SKIP  @thm_* coverage (catppuccin submodule not checked out)\n'
-fi
-
-# The status line is deliberately transparent, so the terminal (also
-# matugen-themed) shows through. A style statement in the generated file would
-# fight that - and window-active-style in particular would make panes opaque.
-bad_styles="$(grep -vn '^[[:space:]]*#' "$TEMPLATE" | grep 'window-active-style\|status-bg' || true)"
-check "template sets palette variables only, no styles" "$bad_styles"
-
-# --- 5. Accents stay legible on the bar ------------------------------------
-# matugen's base16 base08-base0F are identical in light and dark mode (only
-# base00-base07 invert), so accents taken from them render near-white on a
-# light palette. Anything catppuccin draws as text has to clear the WCAG 3:1
-# floor against the surface it sits on.
-contrast() { # #rrggbb #rrggbb -> ratio, 2dp
-    python3 - "$1" "$2" <<'PYEOF'
-import sys
-
-def lum(h):
-    h = h.lstrip('#')
-    c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-    c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
-    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-
-a, b = sorted((lum(sys.argv[1]), lum(sys.argv[2])), reverse=True)
-print(f'{(a + 0.05) / (b + 0.05):.2f}')
-PYEOF
-}
-
-value_of() { sed -n "s/^set -gq[[:space:]]*$1[[:space:]]*\"\(#[0-9a-fA-F]*\)\".*/\1/p" "$GENERATED"; }
-
-if ! command -v python3 >/dev/null; then
-    printf 'SKIP  accent contrast (python3 not installed)\n'
-else
-    bg="$(value_of @thm_bg)"
-    illegible=""
-    for var in @thm_red @thm_green @thm_yellow @thm_blue @thm_mauve @thm_teal \
-        @thm_sapphire @thm_lavender @thm_peach @thm_maroon @thm_fg @thm_subtext_0; do
-        colour="$(value_of "$var")"
-        [[ -z $colour ]] && { illegible+="$var(unset) "; continue; }
-        ratio="$(contrast "$colour" "$bg")"
-        awk -v r="$ratio" 'BEGIN { exit !(r < 3.0) }' && illegible+="$var($colour, ${ratio}:1) "
-    done
-    check "accents clear 3:1 against @thm_bg ($bg)" "${illegible:+illegible: $illegible}"
-fi
-
-# --- 6. Real tmux server ---------------------------------------------------
+# --- 4. Real tmux server ---------------------------------------------------
 if ! command -v tmux >/dev/null; then
     printf 'SKIP  live server checks (tmux not installed)\n'
 elif [[ ! -r $GENERATED ]]; then
@@ -175,46 +137,45 @@ else
 
         get() { tmux -L "$SOCKET" show -gv "$1" 2>/dev/null; }
 
-        # Value from the generated file, so this follows the current wallpaper
-        # and mode rather than asserting a hardcoded colour.
-        want_bg="$(sed -n 's/^set -gq[[:space:]]*@thm_bg[[:space:]]*"\(#[0-9a-fA-F]*\)".*/\1/p' "$GENERATED")"
-        got_bg="$(get @thm_bg)"
+        mode="$(sed -n 's/^set -gq @theme_mode "\(.*\)".*/\1/p' "$GENERATED")"
+        [[ $mode == light ]] && want_flavour="latte" || want_flavour="mocha"
+        got_flavour="$(get @catppuccin_flavor)"
 
-        if [[ -z $want_bg ]]; then
-            fail "@thm_bg comes from matugen" "no @thm_bg line in $GENERATED"
-        elif [[ ${got_bg,,} == "${want_bg,,}" ]]; then
-            pass "@thm_bg comes from matugen ($got_bg)"
+        if [[ $got_flavour == "$want_flavour" ]]; then
+            pass "flavour follows the mode ($mode -> $got_flavour)"
         else
-            fail "@thm_bg comes from matugen" "server has $got_bg, matugen wrote $want_bg (catppuccin won the -ogq race)"
+            fail "flavour follows the mode" \
+                "matugen wrote mode=$mode, expected $want_flavour, server has $got_flavour"
         fi
 
-        # A module colour baked with -ogqF at plugin load: the check that the
-        # source ordering actually took effect, not just that it looks right.
-        uptime_colour="$(get @catppuccin_uptime_color)"
-        want_sapphire="$(sed -n 's/^set -gq[[:space:]]*@thm_sapphire[[:space:]]*"\(#[0-9a-fA-F]*\)".*/\1/p' "$GENERATED")"
+        # The flavour has to have been applied, not merely requested: compare a
+        # palette value against that flavour's own theme file.
+        theme_file="$THEMES/catppuccin_${want_flavour}_tmux.conf"
+        if [[ -r $theme_file ]]; then
+            want_sapphire="$(sed -n 's/^set -ogq @thm_sapphire "\(#[0-9a-fA-F]*\)".*/\1/p' "$theme_file")"
+            got_sapphire="$(get @thm_sapphire)"
 
-        if [[ -z $want_sapphire ]]; then
-            fail "baked module colours use the matugen palette" "no @thm_sapphire line in $GENERATED"
-        elif [[ ${uptime_colour,,} == "${want_sapphire,,}" ]]; then
-            pass "baked module colours use the matugen palette"
+            if [[ ${got_sapphire,,} == "${want_sapphire,,}" ]]; then
+                pass "palette comes from the $want_flavour theme ($got_sapphire)"
+            else
+                fail "palette comes from the $want_flavour theme" \
+                    "@thm_sapphire is $got_sapphire, $want_flavour defines $want_sapphire"
+            fi
+
+            # The reload path, which is where this last broke: catppuccin sets
+            # its options with `set -ogq` (only if unset) and bakes module
+            # colours at load, so on a re-source the previous flavour's values
+            # survive and win. Plant stale values; a reload has to clear them.
+            tmux -L "$SOCKET" set -g @catppuccin_uptime_color "#123456"
+            tmux -L "$SOCKET" set -g @thm_sapphire "#123456"
+            tmux -L "$SOCKET" source-file "$CONF"
+
+            detail=""
+            [[ "$(get @thm_sapphire)" == "$want_sapphire" ]] || detail+="@thm_sapphire stayed $(get @thm_sapphire) "
+            [[ "$(get @catppuccin_uptime_color)" == "$want_sapphire" ]] || detail+="@catppuccin_uptime_color stayed $(get @catppuccin_uptime_color) "
+            check "re-sourcing re-themes the palette and baked module colours" "$detail"
         else
-            fail "baked module colours use the matugen palette" \
-                "@catppuccin_uptime_color is $uptime_colour, expected $want_sapphire"
-        fi
-
-        # The reload path, which is where this last broke: @thm_* updated on a
-        # re-source but the module colours catppuccin baked with -ogq at the
-        # previous load survived, so the bar kept the old palette. Plant a
-        # stale value and check a reload actually clears it.
-        tmux -L "$SOCKET" set -g @catppuccin_uptime_color "#123456"
-        tmux -L "$SOCKET" source-file "$CONF"
-        reloaded="$(get @catppuccin_uptime_color)"
-
-        if [[ ${reloaded,,} == "${want_sapphire,,}" ]]; then
-            pass "re-sourcing the config re-themes baked module colours"
-        else
-            fail "re-sourcing the config re-themes baked module colours" \
-                "@catppuccin_uptime_color is $reloaded after a reload, expected $want_sapphire"
+            printf 'SKIP  palette checks (%s not readable)\n' "$theme_file"
         fi
 
         status_style="$(get status-style)"

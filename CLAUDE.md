@@ -34,8 +34,8 @@ This reads `matugen/config.toml` and writes generated color files to:
 - `kitty/themes/Matugen.conf` — Kitty theme (reloads via kitten)
 - `nvim/colors/matugen.vim` — Neovim colorscheme; nvim reads the mode from it
   and otherwise uses catppuccin (see Neovim Colours below)
-- `tmux/colors.conf` — tmux palette, as the `@thm_*` variables catppuccin/tmux
-  reads (sourced from `.tmux.conf`; see Tmux Theming below)
+- `tmux/colors.conf` — the desktop's light/dark mode as `@theme_mode`; tmux
+  turns it into a catppuccin flavour (see Tmux Theming below)
 - `quickshell/services/Scheme.qml` — Quickshell M3 palette (Quickshell hot-reloads on file change)
 
 **Never manually edit these generated files** — they are overwritten on next `matugen` run. Edit the templates in `matugen/templates/` instead.
@@ -55,12 +55,15 @@ wallpaper several of them collapse into each other. `X` and `on_X_container`
 with the mode. Compare candidates with
 `matugen image <wall> -m light --prefer saturation --dry-run -j hex`. A matugen
 palette only has four hues, so an eight-slot palette will reuse some — that's
-the palette being monochromatic, not a mapping bug. `tmux/tests/run_tests.sh`
-asserts a WCAG 3:1 floor against the surface, which is what catches this.
+the palette being monochromatic, not a mapping bug.
 
-The limit of that approach is why nvim doesn't use a wallpaper palette at all:
-four hues spread over a syntax palette leaves the categories reading as the
-same colour. Editors want more separation than a matugen palette carries.
+The limit of that approach is why **nvim and tmux don't use the wallpaper
+palette at all**: four hues spread over a syntax palette or catppuccin's
+fourteen colour names leaves the categories reading as the same tone. Both
+take only the *mode* from matugen and get their colours from catppuccin —
+latte in light, mocha in dark. The wallpaper still drives everything whose
+palette is mostly surfaces: hyprland, waybar, rofi, quickshell, kitty and
+ghostty.
 
 ## Architecture
 
@@ -313,33 +316,35 @@ TPM and Catppuccin are git submodules under `tmux/plugins/`. To install plugins:
 
 ### Tmux Theming
 
-`tmux/colors.conf` is matugen output that fills the `@thm_*` variables
-catppuccin/tmux v2 reads, so the bar follows the wallpaper and the light/dark
-toggle. Three things about it are load-order-sensitive, and each one silently
-half-works if got wrong:
+tmux follows the desktop's light/dark mode with a catppuccin flavour — latte in
+light, mocha in dark — the same arrangement as nvim, and for the same reason
+(see the accent rule under Color Theming).
 
-- **The variable names have to be catppuccin's own.** The template originally
-  set `@thm_primary`, `@thm_surface_low`, `@thm_bar_bg` — names this plugin
-  never reads — so the colours went nowhere and the bar stayed on mocha. Only
-  `@thm_bg`/`@thm_fg` overlapped.
-- **`colors.conf` is sourced *before* `catppuccin.tmux` runs.** catppuccin sets
-  its palette with `set -ogq` (only if unset), so whatever is already there
-  wins; the mocha flavour stays as the fallback for a fresh clone. Sourcing
-  after the run would leave the module colours catppuccin bakes at load
-  (`set -ogqF`) on catppuccin's values.
-- **A reload has to clear `@catppuccin_*` first.** Those baked options are
-  still set on a re-source, and `-ogq` won't overwrite them: `@thm_*` would
-  update while the status modules kept the old palette. `.tmux.conf` unsets
-  them via `run-shell` before re-setting its own, which is what makes both
-  `prefix r` and the matugen `post_hook` re-theme a live server.
+`tmux/colors.conf` is matugen output that carries one line, `@theme_mode`.
+`.tmux.conf` maps it to `@catppuccin_flavor` with `if-shell -F`, which tests a
+tmux format instead of spawning a shell. The mapping lives in tmux rather than
+in the template because matugen's engine has no conditionals — `{% if %}`
+renders verbatim, only `{{mode}}` expands.
+
+Order matters, and each way of getting it wrong half-works:
+
+- **Source the mode, then map it, then run `catppuccin.tmux`.** The plugin
+  reads `@catppuccin_flavor` at load; anything after the run line is a mode
+  behind. The `set -g @catppuccin_flavor "mocha"` above the source is the
+  fallback for a fresh clone with no `colors.conf` yet.
+- **A reload has to clear `@catppuccin_*` and `@thm_*` first.** catppuccin sets
+  both with `set -ogq` (only if unset) and bakes module colours at load with
+  `-ogqF`, so on a re-source the previous flavour's values survive and win —
+  the flavour option would flip while every colour stayed put. `.tmux.conf`
+  unsets them via `run-shell` before re-setting its own, which is what makes
+  both `prefix r` and the matugen `post_hook` re-theme a live server.
 
 tmux has no reload signal, so the `post_hook` in `matugen/config.toml`
-re-sources `.tmux.conf` on the default socket (guarded by `tmux info`, since
-there may be no server).
+re-sources `.tmux.conf` on the default socket, guarded by `tmux info` since
+there may be no server running.
 
-Palette variables only — no style statements in the generated file. The status
-line is deliberately transparent (`bg=default`) so the matugen-themed terminal
-shows through, and a `window-active-style` would make the panes opaque.
+The status line is deliberately transparent (`bg=default`) so the
+matugen-themed terminal shows through.
 
 ### Tmux Config Tests
 
@@ -348,17 +353,17 @@ server on a private socket (`-L matugen-tmux-tests-$$`) with the repo's config
 and asserts on the options it ends up with, then kills it. The rest is
 source-level.
 
-- Run: `tmux/tests/run_tests.sh` (needs `tmux`; the contrast check needs
-  `python3`, and both skip cleanly if missing).
-- Covers: the template being mode-agnostic; `[templates.tmux]` existing in
-  `matugen/config.toml` with a reload `post_hook`; `colors.conf` being sourced
-  before the catppuccin run; the template's `@thm_*` names matching the
-  plugin's exactly, in both directions; accents clearing 3:1 against
-  `@thm_bg`; and — the one that caught a real half-fix — a re-source actually
-  re-theming a baked module colour after a stale value is planted.
-- Both sides of the name comparison read `^set ` lines only. These files
-  discuss `@thm_*` names in their comments, and matching those lets a name
-  pass on a mention.
+- Run: `tmux/tests/run_tests.sh` (needs `tmux`; skips the live section cleanly
+  without it).
+- Covers: the template carrying the mode and *only* the mode (no `@thm_*` of
+  its own, which would fight the flavour); `[templates.tmux]` existing in
+  `matugen/config.toml` with a reload `post_hook`; the source → map → run
+  ordering; both flavour arms being present, since a run only exercises the
+  current mode; the live server's flavour matching the generated mode and its
+  palette matching that flavour's own theme file; and — the one that caught a
+  real half-fix — planted stale values being cleared by a re-source.
+- Run it in both modes when changing this wiring. The live section can only
+  test the mode the desktop is in.
 
 ### Hyprland Lua Config + Tests
 
