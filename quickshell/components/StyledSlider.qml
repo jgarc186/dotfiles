@@ -1,5 +1,5 @@
 //
-// Material 3 (expressive) horizontal slider.
+// Horizontal slider: a thin track with a round handle.
 //
 // Stateless on purpose: `value` is meant to be bound to whatever it controls
 // and `moved` is the only way it changes, so the thing being controlled stays
@@ -23,14 +23,13 @@ Item {
 
     readonly property alias dragging: mouse.pressed
 
-    // The handle is a bar inset from the ends, with a gap either side, so the
-    // track it sits in has to give up that much width
-    readonly property real handleWidth: 4
-    readonly property real handleGap: 6
-    readonly property real trackHeight: 16
+    readonly property real handleSize: 20
+    readonly property real trackHeight: 8
 
-    // Centre of the handle
-    readonly property real handleX: handleWidth / 2 + Math.max(0, Math.min(1, value)) * (width - handleWidth)
+    // Centre of the handle. Derived from handleSize rather than the handle's
+    // drawn size so that growing it under the pointer doesn't also shift it -
+    // the grow is a `scale`, which costs no layout.
+    readonly property real handleX: handleSize / 2 + Math.max(0, Math.min(1, value)) * (width - handleSize)
 
     signal moved(real newValue)
 
@@ -38,10 +37,10 @@ Item {
     implicitHeight: 40
 
     function moveTo(x: real): void {
-        const span = width - handleWidth;
+        const span = width - handleSize;
         if (span <= 0)
             return;
-        root.moved(Math.max(0, Math.min(1, (x - handleWidth / 2) / span)));
+        root.moved(Math.max(0, Math.min(1, (x - handleSize / 2) / span)));
     }
 
     function nudge(steps: real): void {
@@ -57,11 +56,11 @@ Item {
         }
     }
 
-    // Filled portion
+    // Filled portion, running under the handle to its centre
     StyledRect {
         anchors.verticalCenter: parent.verticalCenter
 
-        width: Math.max(0, root.handleX - root.handleWidth / 2 - root.handleGap)
+        width: root.handleX
         height: root.trackHeight
         radius: Appearance.rounding.full
         color: root.activeColour
@@ -71,7 +70,7 @@ Item {
     StyledRect {
         anchors.verticalCenter: parent.verticalCenter
 
-        x: root.handleX + root.handleWidth / 2 + root.handleGap
+        x: root.handleX
         width: Math.max(0, parent.width - x)
         height: root.trackHeight
         radius: Appearance.rounding.full
@@ -81,11 +80,20 @@ Item {
     StyledRect {
         anchors.verticalCenter: parent.verticalCenter
 
-        x: root.handleX - root.handleWidth / 2
-        width: root.handleWidth
-        height: parent.height
+        x: root.handleX - root.handleSize / 2
+        width: root.handleSize
+        height: root.handleSize
         radius: Appearance.rounding.full
         color: root.activeColour
+
+        // Grows under the pointer, and further while it's being dragged
+        scale: mouse.pressed ? 1.2 : mouse.containsMouse ? 1.1 : 1
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
     }
 
     MouseArea {
