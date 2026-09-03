@@ -16,6 +16,7 @@ import "bar"
 import "border"
 import "network"
 import "session"
+import "volume"
 import qs.components
 import qs.config
 import qs.services
@@ -53,6 +54,10 @@ StyledWindow {
 
         Region {
             item: network
+        }
+
+        Region {
+            item: volume
         }
     }
 
@@ -107,14 +112,18 @@ StyledWindow {
         }
     }
 
-    // Wi-Fi popout, centred on the bar rather than pinned to its icon: the
-    // list is tall enough that tracking the icon would run it off-screen.
+    // Wi-Fi popout, pinned to the y of the bar icon that opened it rather than
+    // to the screen's centre - the two happen to coincide on a laptop panel and
+    // are far apart on a large monitor, which read as the popout drifting up.
+    // The list is tall, so the position is clamped inside the frame; that also
+    // keeps it on-screen when the icon sits near an edge.
     Loader {
         id: network
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
-        anchors.verticalCenter: parent.verticalCenter
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.networkY - height / 2))
 
         active: ShellState.network || opacity > 0
         opacity: ShellState.network ? 1 : 0
@@ -122,6 +131,35 @@ StyledWindow {
         transformOrigin: Item.Left
 
         sourceComponent: Network {}
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
+    // Volume popout, pinned to its bar icon the same way as the Wi-Fi one.
+    Loader {
+        id: volume
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.audioY - height / 2))
+
+        active: ShellState.audio || opacity > 0
+        opacity: ShellState.audio ? 1 : 0
+        scale: ShellState.audio ? 1 : 0.85
+        transformOrigin: Item.Left
+
+        sourceComponent: Volume {}
 
         Behavior on opacity {
             Anim {
@@ -144,7 +182,7 @@ StyledWindow {
         // Held over while the bubble fades out, so it doesn't blank mid-fade
         property string lastText: ShellState.tooltipText
 
-        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
@@ -176,11 +214,12 @@ StyledWindow {
 
     // Click outside to dismiss
     HyprlandFocusGrab {
-        active: ShellState.session || ShellState.network
+        active: ShellState.session || ShellState.network || ShellState.audio
         windows: [root]
         onCleared: {
             ShellState.session = false;
             ShellState.network = false;
+            ShellState.audio = false;
         }
     }
 }

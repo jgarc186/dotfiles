@@ -68,15 +68,48 @@ StyledRect {
         }
     }
 
+    // Hovering reports the level, clicking opens the volume popout
     Component {
         id: audioComp
 
-        MaterialIcon {
-            animate: true
-            text: Icons.getVolumeIcon(Audio.volume, Audio.muted)
-            color: root.colour
-            size: Appearance.font.size.iconMedium
-            fill: 1
+        Item {
+            id: audio
+
+            readonly property string tooltip: Audio.muted ? "Muted" : `Volume \u00b7 ${Math.round(Audio.volume * 100)}%`
+
+            implicitWidth: audioIcon.implicitWidth
+            implicitHeight: audioIcon.implicitHeight
+
+            onTooltipChanged: ShellState.updateTooltip(audio, tooltip)
+
+            StateLayer {
+                // Square the hit area up without stretching the row
+                anchors.fill: undefined
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: audioIcon.implicitHeight + Appearance.padding.small
+                radius: Appearance.rounding.full
+                color: root.colour
+
+                onClicked: {
+                    ShellState.audioY = audio.mapToItem(null, 0, audio.height / 2).y;
+                    ShellState.audio = !ShellState.audio;
+                }
+                onEntered: ShellState.showTooltip(audio, audio.tooltip, audio.mapToItem(null, 0, audio.height / 2).y)
+                onExited: ShellState.hideTooltip(audio)
+            }
+
+            MaterialIcon {
+                id: audioIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: Icons.getVolumeIcon(Audio.volume, Audio.muted)
+                color: root.colour
+                size: Appearance.font.size.iconMedium
+                fill: 1
+            }
         }
     }
 
@@ -121,7 +154,10 @@ StyledRect {
                 radius: Appearance.rounding.full
                 color: root.colour
 
-                onClicked: ShellState.network = !ShellState.network
+                onClicked: {
+                    ShellState.networkY = net.mapToItem(null, 0, net.height / 2).y;
+                    ShellState.network = !ShellState.network;
+                }
                 onEntered: ShellState.showTooltip(net, net.tooltip, net.mapToItem(null, 0, net.height / 2).y)
                 onExited: ShellState.hideTooltip(net)
             }

@@ -204,18 +204,38 @@ Structure:
   re-reads rather than serving a cache. It polls every 5s, or every second while
   something is showing the numbers (`Mem.watch()` / `Mem.unwatch()`).
 - `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
-  + press ripple), `Anim`/`CAnim` (the motion tokens as animation presets),
-  `Tooltip`, and `MaterialShape`.
+  + press ripple), `StyledSlider`, `Anim`/`CAnim` (the motion tokens as animation
+  presets), `Tooltip`, and `MaterialShape`.
 - `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
-  `network/` (the Wi-Fi popout).
+  `network/` (the Wi-Fi popout), `volume/` (the sink volume popout).
 
 Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
 widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
 widget drew beside itself would be cut off at the bar's edge. A widget flips a
-flag on `ShellState` (`session`, `network` — mutually exclusive) or calls
-`ShellState.showTooltip(owner, text, y)` with its own centre in window
-coordinates, and `ShellWindow` renders it, adds it to the input `mask`, and
-turns on layershell keyboard focus when a popout needs typing.
+flag on `ShellState` (`session`, `network`, `audio` — mutually exclusive, each
+handler closing the others) or calls `ShellState.showTooltip(owner, text, y)`
+with its own centre in window coordinates, and `ShellWindow` renders it, adds it
+to the input `mask`, and turns on layershell keyboard focus when a popout needs
+typing (the Wi-Fi one, for its password field; the volume one deliberately not,
+so opening it doesn't take keys off the focused app).
+
+**A popout anchored to the screen rather than to its icon only looks right on
+one monitor size.** The network popout was `anchors.verticalCenter:
+parent.verticalCenter`, which coincides with the status icons on a 15" laptop
+panel and sits far below them on a 32" one — reading as the popout floating up
+away from the button. So a bar widget that opens a popout also records its own
+centre in window coordinates (`ShellState.networkY`, `audioY`, the same
+`mapToItem(null, 0, height / 2).y` the tooltips use), and `ShellWindow` clamps
+that against `Config.border.thickness` at both ends. The clamp is what makes
+icon-tracking safe for a tall popout near a screen edge, which is why the
+screen-centred version existed in the first place.
+
+`StyledSlider` holds no value of its own: `value` is bound to what it controls
+and `moved` is the only way it changes. A local drag copy drifts from the real
+value the moment something else moves it (a volume key, another mixer). Its one
+piece of state is the drag itself — the `Behavior on value` is disabled while
+pressed, since easing a value the pointer is already dragging makes the handle
+lag the cursor.
 
 `components/MaterialShape.qml` replaces upstream's `M3Shapes` C++ plugin: each
 shape is a polar radius function sampled at fixed angles, so morphing between two
