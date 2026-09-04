@@ -319,14 +319,23 @@ through `Theme.setWallpaper()`, sharing the `busy` guard with the light/dark
 switch — both end in a matugen run over the same template outputs, and two at
 once interleave their writes.
 
-**Moving through it is the wheel or a drag.** `PathView` drags on its own but
-ignores the wheel entirely, which on a desktop reads as a strip that doesn't
-move, so a `WheelHandler` steps `currentIndex`. It accumulates deltas rather than
-acting per event: a mouse notch arrives as one 120 while a touchpad sends a
-stream of small ones that would each fly a whole wallpaper past. It takes
-whichever axis moved further — vertical is the usual gesture over a horizontal
-strip, a touchpad two-finger swipe comes in on the other one. There is no
-keyboard path: the panel deliberately takes no keyboard focus.
+**Moving through it: the arrows or a drag. The wheel does not work here, and it
+is not obvious why.** `PathView` drags on its own, and that is confirmed working.
+The wheel is wired two ways — a `WheelHandler` on the view and a panel-wide
+`MouseArea.onWheel`, both feeding `view.wheelStep()`, which accumulates deltas
+rather than acting per event (a mouse notch arrives as one 120 while a touchpad
+sends a stream of small ones that would each fly a whole wallpaper past). Neither
+has ever fired. Probes on the carousel, on the panel root, on a panel-wide
+MouseArea *and* on the window itself all logged zero wheel events, so this is not
+hit-testing — nothing is reaching the QML scene. Both paths are left in place so
+it starts working if delivery ever does.
+
+That is why the ◀ ▶ arrows exist. They are not decoration: clicks are the one
+input on this panel proven to work end to end, a drag needs the pointer already
+on a thumbnail, and there is no keyboard path since the panel deliberately takes
+no keyboard focus. Before rewriting the wheel handling, check whether scrolling
+over the *bar* is seen at all — if it isn't, the problem is shell-wide rather
+than the picker's.
 
 **`Theme` reads `Colours.currentLight`, never `Colours.light`.** `light` follows
 the preview. `Theme.syncToPalette()` runs `theme-mode apply`, which moves the
@@ -346,6 +355,23 @@ is on a grace timer so the pointer can cross the gap from the zone to the panel.
 The panel's own hover is a `HoverHandler`, not a `MouseArea`: the thumbnails are
 `MouseArea`s, and a parent `MouseArea` never sees the pointer once it is over a
 child one — which is every part of the panel worth hovering.
+
+**The handoff from the zone to the panel is a race, and the grace timer is the
+budget for it.** The panel's hover does not arrive the instant the pointer
+reaches it: the enlarged input region has to be committed and picked up by the
+compositor first, and it was routinely losing that race — both the zone and the
+panel would read un-hovered for long enough that the close timer fired and the
+panel shut just as you got to it. The zone grows to the panel's whole footprint
+while open, which helps but cannot remove the race (that region change needs the
+same round trip), so `closeDelay` is deliberately generous at 1200ms. Shortening
+it will bring the bug back.
+
+**This panel takes no `HyprlandFocusGrab`,** unlike the three click-opened
+popouts. It closes on pointer-out, so it never needs click-outside-to-dismiss —
+and a grab is actively harmful here: two shell instances running at once (easy to
+do by accident, since quickshell is started by hand rather than autostarted) clear
+each other's grabs, each `onCleared` closing the other's panel. That looked
+exactly like the panel closing itself at random while still hovered.
 
 **Gotchas found by running it (the picker's, not the shell's):**
 - **`find` does not follow a symlinked starting directory.** The default

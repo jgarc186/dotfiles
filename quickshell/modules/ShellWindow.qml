@@ -200,8 +200,21 @@ StyledWindow {
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
 
-        implicitWidth: root.fullscreen ? 0 : Config.wallpapers.hotZoneWidth
-        implicitHeight: root.fullscreen ? 0 : Config.border.thickness
+        // While the panel is up the zone grows to cover its whole footprint, so
+        // the pointer moving off the strip and onto the panel never crosses a
+        // strip of screen that belongs to neither.
+        //
+        // It has to be one region rather than two touching ones: the panel's own
+        // hover does not arrive the instant the pointer reaches it - the enlarged
+        // input region has to reach the compositor first - and the handoff was
+        // losing that race, leaving both the zone and the panel un-hovered long
+        // enough for the close timer to fire. The panel would shut just as you
+        // reached it, and only re-open by going back to the very bottom edge.
+        //
+        // Declared before the panel Loader, so it sits *under* it and the
+        // thumbnails still take their own clicks.
+        implicitWidth: root.fullscreen ? 0 : ShellState.wallpapers ? Math.max(Config.wallpapers.hotZoneWidth, wallpapers.width) : Config.wallpapers.hotZoneWidth
+        implicitHeight: root.fullscreen ? 0 : ShellState.wallpapers ? Config.border.thickness + wallpapers.height : Config.border.thickness
 
         MouseArea {
             id: wallpaperHotZone
@@ -318,7 +331,11 @@ StyledWindow {
 
     // Click outside to dismiss
     HyprlandFocusGrab {
-        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.wallpapers
+        // Deliberately not ShellState.wallpapers. That panel opens on hover and
+        // closes when the pointer leaves, so it never needs click-outside-to-
+        // dismiss - and taking a grab for it costs the pointer events it lives
+        // on.
+        active: ShellState.session || ShellState.network || ShellState.audio
         windows: [root]
         onCleared: {
             ShellState.session = false;

@@ -30,8 +30,10 @@ Singleton {
         // Long enough that crossing the bottom edge on the way somewhere else
         // doesn't open it
         readonly property int dwell: 250
-        // Grace before closing once the pointer leaves both the zone and the panel
-        readonly property int closeDelay: 400
+        // Grace before closing once the pointer leaves both the zone and the
+        // panel. Generous because it is also the budget for the handoff between
+        // them, and losing that race shuts the panel in your face.
+        readonly property int closeDelay: 1200
 
         // A flick moves the selection several times on the way past, and each
         // preview is a real matugen run

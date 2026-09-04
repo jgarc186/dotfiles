@@ -21,12 +21,25 @@ StyledRect {
     id: root
 
     readonly property int itemWidth: Config.wallpapers.itemWidth + Appearance.padding.medium * 2
+    readonly property int arrowSize: 40
 
-    implicitWidth: Math.max(itemWidth, view.implicitWidth) + Appearance.padding.large * 2
+    implicitWidth: Math.max(itemWidth, view.implicitWidth) + (arrowSize + Appearance.spacing.small) * 2 + Appearance.padding.large * 2
     implicitHeight: header.height + view.implicitHeight + Appearance.spacing.small + Appearance.padding.large * 2
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Appearance.rounding.extraLarge
+
+    // Wheel is handled twice on purpose. A WheelHandler on the view is the
+    // idiomatic form, but nothing has been seen to arrive through it on this
+    // layer surface, and caelestia drives its own scrolling from MouseArea.onWheel
+    // instead - so both are wired to the same stepping function. NoButton keeps
+    // this one out of the way of the thumbnails' own clicks.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+
+        onWheel: event => view.wheelStep(Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y) ? event.angleDelta.x : event.angleDelta.y)
+    }
 
     StyledText {
         id: header
@@ -38,6 +51,53 @@ StyledRect {
         text: Theme.busy ? "Applying…" : "Wallpaper"
         color: Colours.palette.m3onSurfaceVariant
         font.pointSize: Appearance.font.size.normal
+    }
+
+    // Clicks are the one input on this panel proven to work end to end, so the
+    // carousel gets a pair of them. They are not decoration: the wheel is
+    // unreliable here and a drag needs the pointer to already be on a thumbnail.
+    Arrow {
+        anchors.left: parent.left
+        anchors.leftMargin: Appearance.padding.large
+        anchors.verticalCenter: view.verticalCenter
+
+        icon: "chevron_left"
+        onTriggered: view.decrementCurrentIndex()
+    }
+
+    Arrow {
+        anchors.right: parent.right
+        anchors.rightMargin: Appearance.padding.large
+        anchors.verticalCenter: view.verticalCenter
+
+        icon: "chevron_right"
+        onTriggered: view.incrementCurrentIndex()
+    }
+
+    component Arrow: Item {
+        required property string icon
+
+        signal triggered
+
+        implicitWidth: root.arrowSize
+        implicitHeight: root.arrowSize
+
+        visible: view.count > 1
+
+        StateLayer {
+            radius: Appearance.rounding.full
+            color: Colours.palette.m3onSurface
+
+            onClicked: parent.triggered()
+        }
+
+        MaterialIcon {
+            anchors.centerIn: parent
+
+            text: parent.icon
+            color: Colours.palette.m3onSurfaceVariant
+            size: Appearance.font.size.iconMedium
+        }
     }
 
     PathView {
@@ -112,26 +172,27 @@ StyledRect {
         // Deltas are accumulated rather than acted on per event: a mouse notch
         // arrives as a single 120, while a touchpad sends a stream of small ones
         // that would otherwise each step a whole wallpaper and fly past the end.
-        WheelHandler {
-            property real accumulated: 0
+        property real accumulated: 0
 
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        function wheelStep(delta: real): void {
+            accumulated += delta;
+            while (accumulated <= -120) {
+                accumulated += 120;
+                incrementCurrentIndex();
+            }
+            while (accumulated >= 120) {
+                accumulated -= 120;
+                decrementCurrentIndex();
+            }
+        }
+
+        WheelHandler {
 
             onWheel: event => {
                 // A vertical wheel is the usual gesture over a horizontal strip;
                 // a touchpad two-finger swipe comes in on the other axis, so take
                 // whichever moved further.
-                const delta = Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y) ? event.angleDelta.x : event.angleDelta.y;
-                accumulated += delta;
-
-                while (accumulated <= -120) {
-                    accumulated += 120;
-                    view.incrementCurrentIndex();
-                }
-                while (accumulated >= 120) {
-                    accumulated -= 120;
-                    view.decrementCurrentIndex();
-                }
+                view.wheelStep(Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y) ? event.angleDelta.x : event.angleDelta.y);
             }
         }
 
