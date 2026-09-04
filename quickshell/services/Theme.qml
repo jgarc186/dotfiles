@@ -56,6 +56,20 @@ Singleton {
         setProc.running = true;
     }
 
+    // Re-theme from a new wallpaper, staying in whatever mode the desktop is in.
+    //
+    // Shares `busy` with setMode for the reason busy exists at all: both end in a
+    // matugen run that rewrites every template, and a second run started over the
+    // first interleaves its writes into the same files.
+    function setWallpaper(path: string): void {
+        if (busy)
+            return;
+
+        busy = true;
+        setProc.command = [root.script, "wallpaper", path];
+        setProc.running = true;
+    }
+
     // Bring the portal key and the GTK3 theme to the mode the palette is in,
     // without re-running matugen.
     //
@@ -65,16 +79,21 @@ Singleton {
     // Firefox - and the toggle's first click goes the wrong way, because the
     // two halves disagree about which mode it is leaving. The palette is what
     // you can see, so it wins and the other layers follow it.
+    //
+    // Reads Colours.currentLight, never Colours.light: the latter follows the
+    // wallpaper picker's preview palette, and scrolling past a light wallpaper in
+    // dark mode would fire `apply` and flip Firefox and every GTK3 app to match a
+    // preview that was never committed.
     function syncToPalette(): void {
-        if (busy || Colours.light === light)
+        if (busy || Colours.currentLight === light)
             return;
 
-        light = Colours.light;
+        light = Colours.currentLight;
         applyProc.command = [root.script, "apply", light ? "light" : "dark"];
         applyProc.running = true;
     }
 
-    Component.onCompleted: light = Colours.light
+    Component.onCompleted: light = Colours.currentLight
 
     // A matugen run rewrites Scheme.qml, which reloads the config and builds a
     // fresh singleton, so the palette moving is usually *not* something this
@@ -83,7 +102,7 @@ Singleton {
     Connections {
         target: Colours
 
-        function onLightChanged(): void {
+        function onCurrentLightChanged(): void {
             root.syncToPalette();
         }
     }
@@ -147,7 +166,7 @@ Singleton {
                 root.light = wanted;
                 // Changed by hand, so the palette is the half left behind this
                 // time and needs the full re-theme rather than `apply`
-                if (Colours.light !== wanted)
+                if (Colours.currentLight !== wanted)
                     root.setMode(wanted ? "light" : "dark");
             }
         }

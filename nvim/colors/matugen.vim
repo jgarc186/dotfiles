@@ -1,4 +1,4 @@
-" matugen colourscheme — generated from /home/jose/developer/dotfiles/wallpapers/Wallpaper Violet Evergarden White And Black.png in light mode.
+" matugen colourscheme — generated from /home/jose/developer/dotfiles/wallpapers/eBYgF9K.png in dark mode.
 "
 " DO NOT EDIT the output (nvim/colors/matugen.vim): it is overwritten by every
 " `matugen image` / `theme-mode` run. Edit this template instead.
@@ -17,70 +17,70 @@ if exists('syntax_on')
   syntax reset
 endif
 
-set background=light
+set background=dark
 let g:colors_name = 'matugen'
 
 " -- Editor chrome ----------------------------------------------------------
 " lua/user/theme.lua clears Normal's background afterwards to keep the
 " terminal (also matugen-themed) showing through; it is set here so the
 " colourscheme is still correct when loaded on its own.
-hi Normal        guibg=#fdfaec guifg=#1c1c14
-hi NormalNC      guibg=#fdfaec guifg=#1c1c14
-hi NormalFloat   guibg=#f1eee1 guifg=#1c1c14
-hi FloatBorder   guibg=#f1eee1 guifg=#c9c7b6
-hi FloatTitle    guibg=#f1eee1 guifg=#5f621a gui=bold
+hi Normal        guibg=#101418 guifg=#e0e2e8
+hi NormalNC      guibg=#101418 guifg=#e0e2e8
+hi NormalFloat   guibg=#1c2024 guifg=#e0e2e8
+hi FloatBorder   guibg=#1c2024 guifg=#42474e
+hi FloatTitle    guibg=#1c2024 guifg=#9ccbfb gui=bold
 
-hi Cursor        guibg=#5f621a guifg=#ffffff
-hi lCursor       guibg=#5f621a guifg=#ffffff
-hi TermCursor    guibg=#5f621a guifg=#ffffff
-hi CursorLine    guibg=#ebe8db
-hi CursorColumn  guibg=#ebe8db
-hi ColorColumn   guibg=#f1eee1
-hi CursorLineNr  guibg=None guifg=#5f621a gui=bold
-hi LineNr        guibg=None guifg=#797869
-hi SignColumn    guibg=None guifg=#797869
-hi FoldColumn    guibg=None guifg=#797869
-hi Folded        guibg=#f1eee1 guifg=#48473b
+hi Cursor        guibg=#9ccbfb guifg=#003354
+hi lCursor       guibg=#9ccbfb guifg=#003354
+hi TermCursor    guibg=#9ccbfb guifg=#003354
+hi CursorLine    guibg=#272a2f
+hi CursorColumn  guibg=#272a2f
+hi ColorColumn   guibg=#1c2024
+hi CursorLineNr  guibg=None guifg=#9ccbfb gui=bold
+hi LineNr        guibg=None guifg=#8c9199
+hi SignColumn    guibg=None guifg=#8c9199
+hi FoldColumn    guibg=None guifg=#8c9199
+hi Folded        guibg=#1c2024 guifg=#c2c7cf
 
-hi Visual        guibg=#e5e5c0 guifg=#1c1d06
-hi VisualNOS     guibg=#e5e5c0 guifg=#1c1d06
-hi Search        guibg=#bfecda guifg=#002118
-hi IncSearch     guibg=#3c6658 guifg=#ffffff
-hi CurSearch     guibg=#3c6658 guifg=#ffffff
-hi MatchParen    guibg=#e5e3d6 guifg=#3c6658 gui=bold
-hi Substitute    guibg=#ffdad6 guifg=#410002
+hi Visual        guibg=#3a4857 guifg=#d5e4f7
+hi VisualNOS     guibg=#3a4857 guifg=#d5e4f7
+hi Search        guibg=#504060 guifg=#efdbff
+hi IncSearch     guibg=#d4bee6 guifg=#392a49
+hi CurSearch     guibg=#d4bee6 guifg=#392a49
+hi MatchParen    guibg=#32353a guifg=#d4bee6 gui=bold
+hi Substitute    guibg=#93000a guifg=#ffdad6
 
-hi Pmenu         guibg=#f1eee1 guifg=#1c1c14
-hi PmenuSel      guibg=#e5e5c0 guifg=#1c1d06
-hi PmenuSbar     guibg=#ebe8db
-hi PmenuThumb    guibg=#797869
-hi WildMenu      guibg=#e5e5c0 guifg=#1c1d06
+hi Pmenu         guibg=#1c2024 guifg=#e0e2e8
+hi PmenuSel      guibg=#3a4857 guifg=#d5e4f7
+hi PmenuSbar     guibg=#272a2f
+hi PmenuThumb    guibg=#8c9199
+hi WildMenu      guibg=#3a4857 guifg=#d5e4f7
 
-hi StatusLine    guibg=#5f621a guifg=#ffffff
-hi StatusLineNC  guibg=#e5e891 guifg=#1c1d00
-hi TabLine       guibg=#f1eee1 guifg=#48473b
-hi TabLineSel    guibg=#5f621a guifg=#ffffff
-hi TabLineFill   guibg=#f7f4e6
-hi WinBar        guibg=None guifg=#48473b
-hi WinBarNC      guibg=None guifg=#797869
-hi WinSeparator  guibg=None guifg=#c9c7b6
-hi VertSplit     guibg=None guifg=#c9c7b6
+hi StatusLine    guibg=#9ccbfb guifg=#003354
+hi StatusLineNC  guibg=#114a73 guifg=#cfe5ff
+hi TabLine       guibg=#1c2024 guifg=#c2c7cf
+hi TabLineSel    guibg=#9ccbfb guifg=#003354
+hi TabLineFill   guibg=#181c20
+hi WinBar        guibg=None guifg=#c2c7cf
+hi WinBarNC      guibg=None guifg=#8c9199
+hi WinSeparator  guibg=None guifg=#42474e
+hi VertSplit     guibg=None guifg=#42474e
 
-hi NonText       guibg=None guifg=#c9c7b6
-hi Whitespace    guibg=None guifg=#c9c7b6
-hi EndOfBuffer   guibg=None guifg=#c9c7b6
-hi Conceal       guibg=None guifg=#797869
-hi Directory     guibg=None guifg=#5f621a
-hi Title         guibg=None guifg=#3c6658 gui=bold
-hi QuickFixLine  guibg=#ebe8db
-hi SpecialKey    guibg=None guifg=#797869
+hi NonText       guibg=None guifg=#42474e
+hi Whitespace    guibg=None guifg=#42474e
+hi EndOfBuffer   guibg=None guifg=#42474e
+hi Conceal       guibg=None guifg=#8c9199
+hi Directory     guibg=None guifg=#9ccbfb
+hi Title         guibg=None guifg=#d4bee6 gui=bold
+hi QuickFixLine  guibg=#272a2f
+hi SpecialKey    guibg=None guifg=#8c9199
 
-hi ErrorMsg      guibg=None guifg=#ba1a1a
-hi WarningMsg    guibg=None guifg=#3c6658
-hi MoreMsg       guibg=None guifg=#5f6043
-hi Question      guibg=None guifg=#5f6043
-hi ModeMsg       guibg=None guifg=#1c1c14 gui=bold
-hi MsgArea       guibg=None guifg=#1c1c14
+hi ErrorMsg      guibg=None guifg=#ffb4ab
+hi WarningMsg    guibg=None guifg=#d4bee6
+hi MoreMsg       guibg=None guifg=#b9c8da
+hi Question      guibg=None guifg=#b9c8da
+hi ModeMsg       guibg=None guifg=#e0e2e8 gui=bold
+hi MsgArea       guibg=None guifg=#e0e2e8
 
 " -- Syntax -----------------------------------------------------------------
 " Accents come from the M3 roles, not from base16. matugen's base08-base0F are
@@ -97,110 +97,110 @@ hi MsgArea       guibg=None guifg=#1c1c14
 " Comments want to be dim without disappearing: base03 lands around 2:1
 " against the surface in light mode, where `outline` (M3's own low-emphasis
 " role) clears 4:1 and still reads as secondary.
-hi Comment       guibg=None guifg=#797869 gui=italic
+hi Comment       guibg=None guifg=#8c9199 gui=italic
 
-hi Delimiter     guibg=None guifg=#7f7c77
-hi Operator      guibg=None guifg=#7f7c77
+hi Delimiter     guibg=None guifg=#963b51
+hi Operator      guibg=None guifg=#963b51
 
-hi Todo          guibg=None guifg=#676561 gui=bold
+hi Todo          guibg=None guifg=#b3435c gui=bold
 
-hi Identifier    guibg=None guifg=#1c1c14
-hi Constant      guibg=None guifg=#3c6658
-hi Number        guibg=None guifg=#3c6658
-hi Float         guibg=None guifg=#3c6658
-hi Boolean       guibg=None guifg=#3c6658
-hi Type          guibg=None guifg=#002118
-hi StorageClass  guibg=None guifg=#002118
-hi Structure     guibg=None guifg=#002118
-hi Typedef       guibg=None guifg=#002118
-hi String        guibg=None guifg=#5f6043
-hi Character     guibg=None guifg=#5f6043
-hi Special       guibg=None guifg=#1c1d06
-hi SpecialChar   guibg=None guifg=#1c1d06
-hi PreProc       guibg=None guifg=#1c1d06
-hi Include       guibg=None guifg=#5f621a
-hi Define        guibg=None guifg=#1c1d00
-hi Macro         guibg=None guifg=#ba1a1a
-hi Function      guibg=None guifg=#5f621a
-hi Statement     guibg=None guifg=#1c1d00
-hi Conditional   guibg=None guifg=#1c1d00
-hi Repeat        guibg=None guifg=#1c1d00
-hi Label         guibg=None guifg=#1c1d00
-hi Keyword       guibg=None guifg=#1c1d00
-hi Exception     guibg=None guifg=#1c1d00
-hi Tag           guibg=None guifg=#410002
-hi Debug         guibg=None guifg=#ba1a1a
-hi Underlined    guibg=None guifg=#5f621a gui=underline
-hi Ignore        guibg=None guifg=#797869
+hi Identifier    guibg=None guifg=#e0e2e8
+hi Constant      guibg=None guifg=#d4bee6
+hi Number        guibg=None guifg=#d4bee6
+hi Float         guibg=None guifg=#d4bee6
+hi Boolean       guibg=None guifg=#d4bee6
+hi Type          guibg=None guifg=#efdbff
+hi StorageClass  guibg=None guifg=#efdbff
+hi Structure     guibg=None guifg=#efdbff
+hi Typedef       guibg=None guifg=#efdbff
+hi String        guibg=None guifg=#b9c8da
+hi Character     guibg=None guifg=#b9c8da
+hi Special       guibg=None guifg=#d5e4f7
+hi SpecialChar   guibg=None guifg=#d5e4f7
+hi PreProc       guibg=None guifg=#d5e4f7
+hi Include       guibg=None guifg=#9ccbfb
+hi Define        guibg=None guifg=#cfe5ff
+hi Macro         guibg=None guifg=#ffb4ab
+hi Function      guibg=None guifg=#9ccbfb
+hi Statement     guibg=None guifg=#cfe5ff
+hi Conditional   guibg=None guifg=#cfe5ff
+hi Repeat        guibg=None guifg=#cfe5ff
+hi Label         guibg=None guifg=#cfe5ff
+hi Keyword       guibg=None guifg=#cfe5ff
+hi Exception     guibg=None guifg=#cfe5ff
+hi Tag           guibg=None guifg=#ffdad6
+hi Debug         guibg=None guifg=#ffb4ab
+hi Underlined    guibg=None guifg=#9ccbfb gui=underline
+hi Ignore        guibg=None guifg=#8c9199
 
-hi Error         guibg=#ffdad6 guifg=#410002
-hi Selection     guibg=#c5c3bc
+hi Error         guibg=#93000a guifg=#ffdad6
+hi Selection     guibg=#412331
 
 " -- Treesitter -------------------------------------------------------------
 " Most @-groups default-link to the core groups above; these are the ones
 " where the default link is too coarse to read well.
-hi @variable          guibg=None guifg=#1c1c14
-hi @variable.builtin  guibg=None guifg=#ba1a1a gui=italic
-hi @variable.member   guibg=None guifg=#48473b
-hi @property          guibg=None guifg=#48473b
-hi @constructor       guibg=None guifg=#002118
-hi @module            guibg=None guifg=#002118
-hi @string.escape     guibg=None guifg=#1c1d06
-hi @tag.attribute     guibg=None guifg=#002118 gui=italic
-hi @markup.link       guibg=None guifg=#5f621a gui=underline
-hi @markup.raw        guibg=None guifg=#5f6043
+hi @variable          guibg=None guifg=#e0e2e8
+hi @variable.builtin  guibg=None guifg=#ffb4ab gui=italic
+hi @variable.member   guibg=None guifg=#c2c7cf
+hi @property          guibg=None guifg=#c2c7cf
+hi @constructor       guibg=None guifg=#efdbff
+hi @module            guibg=None guifg=#efdbff
+hi @string.escape     guibg=None guifg=#d5e4f7
+hi @tag.attribute     guibg=None guifg=#efdbff gui=italic
+hi @markup.link       guibg=None guifg=#9ccbfb gui=underline
+hi @markup.raw        guibg=None guifg=#b9c8da
 hi! link @markup.heading Title
 hi! link @comment.note Todo
 
 " -- Diagnostics ------------------------------------------------------------
-hi DiagnosticError  guibg=None guifg=#ba1a1a
-hi DiagnosticWarn   guibg=None guifg=#3c6658
-hi DiagnosticInfo   guibg=None guifg=#5f621a
-hi DiagnosticHint   guibg=None guifg=#5f6043
-hi DiagnosticOk     guibg=None guifg=#5f6043
-hi DiagnosticUnderlineError  gui=undercurl guisp=#ba1a1a
-hi DiagnosticUnderlineWarn   gui=undercurl guisp=#3c6658
-hi DiagnosticUnderlineInfo   gui=undercurl guisp=#5f621a
-hi DiagnosticUnderlineHint   gui=undercurl guisp=#5f6043
+hi DiagnosticError  guibg=None guifg=#ffb4ab
+hi DiagnosticWarn   guibg=None guifg=#d4bee6
+hi DiagnosticInfo   guibg=None guifg=#9ccbfb
+hi DiagnosticHint   guibg=None guifg=#b9c8da
+hi DiagnosticOk     guibg=None guifg=#b9c8da
+hi DiagnosticUnderlineError  gui=undercurl guisp=#ffb4ab
+hi DiagnosticUnderlineWarn   gui=undercurl guisp=#d4bee6
+hi DiagnosticUnderlineInfo   gui=undercurl guisp=#9ccbfb
+hi DiagnosticUnderlineHint   gui=undercurl guisp=#b9c8da
 
-hi LspReferenceText   guibg=#ebe8db
-hi LspReferenceRead   guibg=#ebe8db
-hi LspReferenceWrite  guibg=#ebe8db
-hi LspInlayHint       guibg=None guifg=#797869 gui=italic
+hi LspReferenceText   guibg=#272a2f
+hi LspReferenceRead   guibg=#272a2f
+hi LspReferenceWrite  guibg=#272a2f
+hi LspInlayHint       guibg=None guifg=#8c9199 gui=italic
 
 " -- Diffs ------------------------------------------------------------------
 " Foreground-only: a tinted background would need a light/dark-specific blend,
 " and this file has to render correctly in both modes from one source.
-hi DiffAdd       guibg=None guifg=#5f6043
-hi DiffChange    guibg=None guifg=#5f621a
-hi DiffDelete    guibg=None guifg=#ba1a1a
-hi DiffText      guibg=None guifg=#002118 gui=bold
+hi DiffAdd       guibg=None guifg=#b9c8da
+hi DiffChange    guibg=None guifg=#9ccbfb
+hi DiffDelete    guibg=None guifg=#ffb4ab
+hi DiffText      guibg=None guifg=#efdbff gui=bold
 hi! link Added   DiffAdd
 hi! link Changed DiffChange
 hi! link Removed DiffDelete
 
-hi GitSignsAdd     guibg=None guifg=#5f6043
-hi GitSignsChange  guibg=None guifg=#5f621a
-hi GitSignsDelete  guibg=None guifg=#ba1a1a
+hi GitSignsAdd     guibg=None guifg=#b9c8da
+hi GitSignsChange  guibg=None guifg=#9ccbfb
+hi GitSignsDelete  guibg=None guifg=#ffb4ab
 
 " -- Plugins ----------------------------------------------------------------
-hi NvimTreeNormal          guibg=None guifg=#1c1c14
-hi NvimTreeRootFolder      guibg=None guifg=#3c6658 gui=bold
-hi NvimTreeFolderName      guibg=None guifg=#5f621a
-hi NvimTreeOpenedFolderName guibg=None guifg=#5f621a gui=bold
-hi NvimTreeFolderIcon      guibg=None guifg=#5f621a
-hi NvimTreeSpecialFile     guibg=None guifg=#3c6658
-hi NvimTreeIndentMarker    guibg=None guifg=#c9c7b6
-hi NvimTreeWinSeparator    guibg=None guifg=#c9c7b6
+hi NvimTreeNormal          guibg=None guifg=#e0e2e8
+hi NvimTreeRootFolder      guibg=None guifg=#d4bee6 gui=bold
+hi NvimTreeFolderName      guibg=None guifg=#9ccbfb
+hi NvimTreeOpenedFolderName guibg=None guifg=#9ccbfb gui=bold
+hi NvimTreeFolderIcon      guibg=None guifg=#9ccbfb
+hi NvimTreeSpecialFile     guibg=None guifg=#d4bee6
+hi NvimTreeIndentMarker    guibg=None guifg=#42474e
+hi NvimTreeWinSeparator    guibg=None guifg=#42474e
 
-hi IblIndent  guibg=None guifg=#c9c7b6
-hi IblScope   guibg=None guifg=#797869
+hi IblIndent  guibg=None guifg=#42474e
+hi IblScope   guibg=None guifg=#8c9199
 
-hi CmpItemAbbr        guibg=None guifg=#1c1c14
-hi CmpItemAbbrMatch   guibg=None guifg=#5f621a gui=bold
-hi CmpItemAbbrDeprecated guibg=None guifg=#797869 gui=strikethrough
-hi CmpItemKind        guibg=None guifg=#3c6658
-hi CmpItemMenu        guibg=None guifg=#797869
+hi CmpItemAbbr        guibg=None guifg=#e0e2e8
+hi CmpItemAbbrMatch   guibg=None guifg=#9ccbfb gui=bold
+hi CmpItemAbbrDeprecated guibg=None guifg=#8c9199 gui=strikethrough
+hi CmpItemKind        guibg=None guifg=#d4bee6
+hi CmpItemMenu        guibg=None guifg=#8c9199
 
 " -- :terminal --------------------------------------------------------------
 " Same role mapping as the kitty template, so a shell inside nvim matches a
@@ -208,19 +208,19 @@ hi CmpItemMenu        guibg=None guifg=#797869
 " roles for the hues (base08-base0F don't invert, so they wash out in light
 " mode). Four hues for ANSI's six, hence magenta/cyan reusing blue/green
 " tones swapped.
-let g:terminal_color_0  = '#fdfaec'
-let g:terminal_color_8  = '#aeaba5'
-let g:terminal_color_1  = '#ba1a1a'
-let g:terminal_color_9  = '#410002'
-let g:terminal_color_2  = '#5f6043'
-let g:terminal_color_10 = '#1c1d06'
-let g:terminal_color_3  = '#3c6658'
-let g:terminal_color_11 = '#002118'
-let g:terminal_color_4  = '#5f621a'
-let g:terminal_color_12 = '#1c1d00'
-let g:terminal_color_5  = '#1c1d00'
-let g:terminal_color_13 = '#5f621a'
-let g:terminal_color_6  = '#1c1d06'
-let g:terminal_color_14 = '#5f6043'
-let g:terminal_color_7  = '#7f7c77'
-let g:terminal_color_15 = '#1c1c14'
+let g:terminal_color_0  = '#101418'
+let g:terminal_color_8  = '#5d2b3c'
+let g:terminal_color_1  = '#ffb4ab'
+let g:terminal_color_9  = '#ffdad6'
+let g:terminal_color_2  = '#b9c8da'
+let g:terminal_color_10 = '#d5e4f7'
+let g:terminal_color_3  = '#d4bee6'
+let g:terminal_color_11 = '#efdbff'
+let g:terminal_color_4  = '#9ccbfb'
+let g:terminal_color_12 = '#cfe5ff'
+let g:terminal_color_5  = '#cfe5ff'
+let g:terminal_color_13 = '#9ccbfb'
+let g:terminal_color_6  = '#d5e4f7'
+let g:terminal_color_14 = '#b9c8da'
+let g:terminal_color_7  = '#963b51'
+let g:terminal_color_15 = '#e0e2e8'

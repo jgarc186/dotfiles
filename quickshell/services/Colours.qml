@@ -15,12 +15,65 @@ import qs.config
 Singleton {
     id: root
 
-    readonly property Scheme palette: Scheme {}
+    // The committed scheme: matugen's generated Scheme.qml, which is an instance
+    // of M3Palette so that `preview` below can be the same shape.
+    readonly property M3Palette current: Scheme {}
+
+    // Filled by load() from a `matugen --dry-run`, so the wallpaper picker can
+    // retint the whole shell without writing a thing. Nothing else should touch it.
+    readonly property M3Palette preview: M3Palette {}
+
+    property bool showPreview: false
+
+    readonly property M3Palette palette: showPreview ? preview : current
     readonly property TPalette tPalette: TPalette {}
 
-    // Matugen doesn't record which mode it generated, so infer it. Every scheme
-    // has a surface far from mid-grey, so this is unambiguous in practice.
-    readonly property bool light: getLuminance(palette.m3surface) > 0.5
+    // What the shell is painted in - the preview while one is up.
+    readonly property bool light: modeOf(palette)
+
+    // What is actually on disk, preview or not. Theme reads this rather than
+    // `light`: it drives `theme-mode apply`, which moves the portal key and the
+    // GTK3 theme, and scrolling the picker past a light wallpaper in dark mode
+    // would otherwise flip Firefox and every GTK3 app to match a preview that
+    // was never committed. The failure is invisible from inside the shell.
+    readonly property bool currentLight: modeOf(current)
+
+    // The template records the mode it generated in. Fall back to inferring it
+    // from the surface for a scheme written before it did - every scheme has a
+    // surface far from mid-grey, so that stays unambiguous in practice.
+    function modeOf(p: M3Palette): bool {
+        return p.mode ? p.mode === "light" : getLuminance(p.m3surface) > 0.5;
+    }
+
+    // Fills `preview` from the JSON `matugen ... --dry-run -j hex` writes.
+    //
+    // Two traps live in that dump. Its colour entries are keyed `color`, not
+    // `hex` - the `.default.hex` the templates use is the *template engine's*
+    // spelling and reads as undefined here. And the roles are snake_case, so the
+    // names have to be converted.
+    //
+    // Walks the JSON rather than the palette's own properties: a plain object
+    // enumerates predictably, where relying on a QObject to list its QML-declared
+    // properties would put the whole mapping on undefined behaviour. The dump
+    // carries every role we declare plus source_color, which converts to a name
+    // no property has and is skipped by the undefined check.
+    function load(data: string): void {
+        const scheme = JSON.parse(data);
+        const colours = scheme.colors ?? {};
+
+        for (const role in colours) {
+            const prop = "m3" + role.replace(/_(.)/g, (_, c) => c.toUpperCase());
+            // An undeclared role reads back undefined; a declared one is a colour
+            if (preview[prop] === undefined)
+                continue;
+
+            const colour = colours[role]?.default?.color;
+            if (colour)
+                preview[prop] = colour;
+        }
+
+        preview.mode = scheme.mode ?? (scheme.is_dark_mode ? "dark" : "light");
+    }
 
     function getLuminance(c: color): real {
         if (c.r === 0 && c.g === 0 && c.b === 0)
