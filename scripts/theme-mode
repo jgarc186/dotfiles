@@ -14,9 +14,11 @@
 #   3. gtk-theme - GTK3 apps, which predate the portal and need a named theme.
 #
 # Usage: theme-mode [light|dark|toggle|status]      (default: toggle)
-#        theme-mode wallpaper <image>   re-theme from a new wallpaper, staying
+#        theme-mode wallpaper <image> [index]
+#                                       re-theme from a new wallpaper, staying
 #                                       in the mode the desktop is already in
 #        theme-mode apply <light|dark>  layers 2 and 3 only, no matugen run
+#        theme-mode index               print the stored source-colour index
 #
 # Use `theme-mode wallpaper` rather than `matugen image` directly: matugen's
 # --mode defaults to dark, so a bare run drags the palette to dark and leaves
@@ -29,6 +31,8 @@ set -euo pipefail
 
 IFACE="org.gnome.desktop.interface"
 COLORS="${HOME}/.config/hypr/colors.conf"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/theme-mode"
+INDEX_FILE="$STATE_DIR/source-index"
 
 # When an image yields several candidate source colours, matugen asks which to
 # use - and aborts outright ("IO error: not a terminal") rather than guessing if
@@ -36,10 +40,31 @@ COLORS="${HOME}/.config/hypr/colors.conf"
 # human at a shell. Answering the question up front is what makes this runnable
 # from the bar or a keybind at all.
 #
+# The answer also has to be *remembered*. A light/dark toggle re-themes from the
+# same wallpaper, so an index that only lived in the environment of the run that
+# chose it would be silently discarded by the next toggle - the palette would
+# jump back to index 0 with nothing on screen explaining why. So it is stored,
+# and MATUGEN_SOURCE_INDEX overrides the stored value for a one-off run.
+#
 # 0 is the candidate that reproduces the palette this setup already had. Compare
 # the others with:
 #   matugen image <wall> -m dark --source-color-index <n> --dry-run -j hex
-SOURCE_INDEX="${MATUGEN_SOURCE_INDEX:-0}"
+#
+# How many candidates an image has varies: the flag itself caps at 0-3, but the
+# real bound comes from the image, and matugen only reports it by failing
+# ("Source color index 1 is out of bounds (0-0)").
+stored_index() {
+    local index
+    index="$(cat "$INDEX_FILE" 2>/dev/null)" || index=""
+    [[ $index =~ ^[0-9]+$ ]] && echo "$index" || echo 0
+}
+
+store_index() {
+    mkdir -p "$STATE_DIR"
+    echo "$1" >"$INDEX_FILE"
+}
+
+SOURCE_INDEX="${MATUGEN_SOURCE_INDEX:-$(stored_index)}"
 
 die() {
     echo "theme-mode: $*" >&2
@@ -123,6 +148,10 @@ status)
     current_mode
     exit 0
     ;;
+index)
+    echo "$SOURCE_INDEX"
+    exit 0
+    ;;
 apply)
     target="${2:-}"
     [[ $target == light || $target == dark ]] || die "apply needs 'light' or 'dark'"
@@ -137,6 +166,13 @@ wallpaper)
     # Absolute, because matugen writes this path straight into colors.conf and
     # current_wallpaper reads it back from wherever the next run happens to be
     image="$(realpath "$image")"
+    # An index given here becomes the stored one, so the next light/dark toggle
+    # re-themes at it rather than dropping back to 0
+    if [[ -n ${3:-} ]]; then
+        [[ $3 =~ ^[0-9]+$ ]] || die "wallpaper index must be a number, got '$3'"
+        SOURCE_INDEX="$3"
+        store_index "$SOURCE_INDEX"
+    fi
     keep="$(current_mode)"
     retheme "$image" "$keep"
     echo "$keep"
@@ -147,7 +183,7 @@ toggle)
     ;;
 light | dark) ;;
 *)
-    die "unknown mode '$mode' (expected light, dark, toggle, status, wallpaper or apply)"
+    die "unknown mode '$mode' (expected light, dark, toggle, status, index, wallpaper or apply)"
     ;;
 esac
 
