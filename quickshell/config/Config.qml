@@ -11,11 +11,34 @@ Singleton {
     readonly property BorderConfig border: BorderConfig {}
     readonly property BarConfig bar: BarConfig {}
     readonly property GeneralConfig general: GeneralConfig {}
+    readonly property WallpaperConfig wallpapers: WallpaperConfig {}
 
     component GeneralConfig: QtObject {
         readonly property bool useTwelveHourClock: false
         // Run when the OS icon is clicked
         readonly property list<string> launcherCommand: ["rofi", "-show", "drun"]
+    }
+
+    component WallpaperConfig: QtObject {
+        // Scanned one level deep for anything `file` calls an image
+        readonly property string directory: `${Quickshell.env("HOME")}/Pictures/wallpapers`
+
+        // The bottom-edge strip that opens the picker. Narrow and centred: it is
+        // masked into the shell's input region, so every pixel of it is a pixel
+        // the desktop below stops receiving clicks on.
+        readonly property int hotZoneWidth: 120
+        // Long enough that crossing the bottom edge on the way somewhere else
+        // doesn't open it
+        readonly property int dwell: 250
+        // Grace before closing once the pointer leaves both the zone and the panel
+        readonly property int closeDelay: 400
+
+        // A flick moves the selection several times on the way past, and each
+        // preview is a real matugen run
+        readonly property int previewDebounce: 150
+
+        readonly property int itemWidth: 200
+        readonly property int maxShown: 7
     }
 
     component BorderConfig: QtObject {

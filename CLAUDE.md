@@ -55,6 +55,21 @@ This reads `matugen/config.toml` and writes generated color files to:
 
 **Never manually edit these generated files** — they are overwritten on next `matugen` run. Edit the templates in `matugen/templates/` instead.
 
+**The quickshell template's root type is `M3Palette`, not `QtObject`.** The role
+names live in `quickshell/services/M3Palette.qml` and the template only assigns
+to them, so the generated scheme and the *preview* palette the wallpaper picker
+fills are one component and can't drift apart (see Quickshell Wallpaper Picker).
+Adding a colour means editing both. The template also writes `mode: "{{mode}}"`:
+`Colours` used to infer light/dark from the surface luminance, which is not safe
+once a preview palette exists.
+
+**`.default.hex` is the template engine's spelling; the `-j` dump uses
+`.default.color`.** `matugen ... --dry-run -j hex` emits
+`colors.<role>.default.color`, and its roles are snake_case where ours are camel
+(`on_primary_fixed_variant` ↔ `m3onPrimaryFixedVariant`). `Colours.load()` does
+that conversion. Reading `.hex` there returns undefined and silently previews
+nothing.
+
 **Templates must read `.default.hex`, never `.dark.hex`/`.light.hex`.** `default`
 is whatever `--mode` the run used; a hardcoded mode renders dark colours into a
 light-mode run, which is how kitty and nvim spent a while stuck on the dark
@@ -197,7 +212,10 @@ Structure:
   (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
   also scans, connects and disconnects for the Wi-Fi popout), `Mem`
   (`/proc/meminfo`), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
-  `ShellState`. `services/Scheme.qml` is matugen output — never edit it.
+  `ShellState`, `Wallpapers` (the list, the one in use, and the live preview).
+  `services/Scheme.qml` is matugen output — never edit it; it is an instance of
+  `services/M3Palette.qml`, which is the writable shape `Colours` keeps a second
+  copy of for previewing.
 
   `Mem` polls: procfs files report a size of 0 and inotify never fires on them,
   so `watchChanges` is out, but `FileView` reads them correctly and `reload()`
@@ -207,7 +225,8 @@ Structure:
   + press ripple), `StyledSlider`, `Anim`/`CAnim` (the motion tokens as animation
   presets), `Tooltip`, and `MaterialShape`.
 - `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
-  `network/` (the Wi-Fi popout), `volume/` (the sink volume popout).
+  `network/` (the Wi-Fi popout), `volume/` (the sink volume popout),
+  `wallpapers/` (the bottom-edge wallpaper picker).
 
 Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
 widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
@@ -283,6 +302,78 @@ Fonts: the shell wants `ttf-material-symbols-variable-git` (icons — without it
 every icon renders as its literal name) and `ttf-rubik-vf` (text). Both are in
 `arch_linux/pkglist.txt`. `CaskaydiaCove NF` covers the mono font.
 
+### Quickshell Wallpaper Picker
+
+`quickshell/modules/wallpapers/` is a carousel of wallpapers that rises out of
+the bottom edge of the frame. Ported from caelestia-dots/shell's
+`modules/launcher/WallpaperList.qml` + `items/WallpaperItem.qml`, with its three
+plugin-backed pieces swapped for stock ones: a plain asynchronous `Image` for
+`CachingImage`, a `MultiEffect` shadow for `Elevation`, a path string for
+`FileSystemEntry`.
+
+**Scrolling previews; only a click writes anything.** `Wallpapers.preview()`
+runs `matugen ... --dry-run -j hex` and hands the JSON to `Colours.load()`,
+which fills `Colours.preview`; `Colours.palette` is
+`showPreview ? preview : current`, so the whole shell retints. Clicking goes
+through `Theme.setWallpaper()`, sharing the `busy` guard with the light/dark
+switch — both end in a matugen run over the same template outputs, and two at
+once interleave their writes.
+
+**Moving through it is the wheel or a drag.** `PathView` drags on its own but
+ignores the wheel entirely, which on a desktop reads as a strip that doesn't
+move, so a `WheelHandler` steps `currentIndex`. It accumulates deltas rather than
+acting per event: a mouse notch arrives as one 120 while a touchpad sends a
+stream of small ones that would each fly a whole wallpaper past. It takes
+whichever axis moved further — vertical is the usual gesture over a horizontal
+strip, a touchpad two-finger swipe comes in on the other one. There is no
+keyboard path: the panel deliberately takes no keyboard focus.
+
+**`Theme` reads `Colours.currentLight`, never `Colours.light`.** `light` follows
+the preview. `Theme.syncToPalette()` runs `theme-mode apply`, which moves the
+portal key and the GTK3 theme, so scrolling past a light wallpaper in dark mode
+would flip Firefox and every GTK3 app to match a palette that was never
+committed. The failure is invisible from inside the shell — everything there
+already looks light — which is why it is worth stating twice.
+
+**The trigger is a masked strip of the bottom border.** Everything outside
+`ShellWindow`'s `mask` passes clicks through to the desktop, so the hot zone has
+to be a `Region` — and every pixel of it is a pixel the desktop below stops
+receiving clicks on, hence 120px wide and centred. It collapses to zero size
+under a fullscreen window, where the frame is already gone and a live strip
+would swallow clicks meant for the video. Opening is on a dwell so that crossing
+the bottom edge on the way somewhere else doesn't drag the panel up, and closing
+is on a grace timer so the pointer can cross the gap from the zone to the panel.
+The panel's own hover is a `HoverHandler`, not a `MouseArea`: the thumbnails are
+`MouseArea`s, and a parent `MouseArea` never sees the pointer once it is over a
+child one — which is every part of the panel worth hovering.
+
+**Gotchas found by running it (the picker's, not the shell's):**
+- **`find` does not follow a symlinked starting directory.** The default
+  wallpaper directory *is* one — `install` symlinks `~/Pictures/wallpapers` to
+  the repo — so `-type f` matched nothing and the list came up empty. `find -L`.
+- **The listing has to `realpath` the directory.** `theme-mode` writes the
+  wallpaper it themed from through `realpath`, so paths listed through the
+  symlink compare unequal to `$image` and the "current" ring never lands on
+  anything.
+- **`file --mime-type -N -F '\t'` still writes a space after the separator**, so
+  the mime has to be matched as an awk field rather than against the line. Doing
+  it by field is also what stops a directory named `image` from passing
+  everything.
+- **Extensions are not usable as the filter.** This directory holds an HTML
+  document with no extension and a JPEG with no extension, which is why the
+  listing shells out to `file` instead of using `Qt.labs.folderlistmodel` with
+  `nameFilters`.
+- **A path is not a URL.** Qt percent-decodes what it is given, and one wallpaper
+  here has a literal `%C3%AB` in its *name*; `file://${path}` resolved to a
+  decoded name that doesn't exist and the thumbnail silently failed to open.
+  `Wallpapers.fileUrl()` encodes per path segment.
+- **The carousel can't seek to the current wallpaper in `Component.onCompleted`.**
+  The listing is a process, so the model is still empty when the panel is built
+  and the panel came up on item 0 every time. It tracks the index instead.
+- Previewing the wallpaper already in use is skipped — the committed palette
+  already is that palette, so it would spend a matugen run arriving back at what
+  is on screen. That is the common case, since the carousel opens on it.
+
 ### Light/Dark Mode
 
 `scripts/theme-mode [light|dark|toggle|status]` (symlinked to
@@ -307,17 +398,35 @@ everything here:
    each mode tries a list of candidates and takes the first one installed.
 
 The wallpaper to re-theme from is recovered from the `$image` line the hyprland
-template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded.
+template writes as line 1 of `hypr/colors.conf`, so no path is hardcoded. The
+quickshell `Wallpapers` service reads that same line for the same reason — one
+record, so the picker's highlight can't disagree with what was themed from. It
+is written through `realpath`, which is why anything comparing against it has to
+resolve symlinks too.
 
 **To re-render every template without changing mode** — what you want after
 editing a template — run `theme-mode "$(theme-mode status)"`. A bare
 `matugen image` would drag the palette to dark, and `theme-mode toggle` would
 land in the other mode.
 
-Two subcommands exist for the halves of that: `theme-mode wallpaper <image>`
-re-themes from a new wallpaper in whatever mode the desktop is already in (what
-you want instead of `matugen image`, whose `--mode` defaults to dark), and
-`theme-mode apply <light|dark>` writes layers 2 and 3 only, skipping matugen.
+Two subcommands exist for the halves of that: `theme-mode wallpaper <image>
+[index]` re-themes from a new wallpaper in whatever mode the desktop is already
+in (what you want instead of `matugen image`, whose `--mode` defaults to dark),
+and `theme-mode apply <light|dark>` writes layers 2 and 3 only, skipping matugen.
+
+**The source-colour index is stored, not just passed.** It lives in
+`${XDG_STATE_HOME:-~/.local/state}/theme-mode/source-index`; `theme-mode index`
+prints it, `theme-mode wallpaper <image> <index>` sets it, and
+`MATUGEN_SOURCE_INDEX` overrides it for one run. It has to persist because a
+light/dark toggle re-themes from the same wallpaper: an index that only lived in
+the environment of the run that chose it was silently discarded by the next
+toggle, and the palette jumped back to candidate 0 with nothing on screen
+explaining why.
+
+How many candidates an image actually has varies by image — the flag itself caps
+at `0..3`, but the real bound comes from the picture and matugen only reports it
+by failing (`Source color index 1 is out of bounds (0-0)`). The wallpaper this
+setup ships with has exactly one; `astronaut.png` has four.
 
 **The palette and the portal key can each move without the other**, and the
 toggle's first click goes the wrong way whenever they disagree — it is leaving a

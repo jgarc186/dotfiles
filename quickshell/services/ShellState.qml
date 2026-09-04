@@ -12,6 +12,7 @@ Singleton {
     property bool session: false
     property bool network: false
     property bool audio: false
+    property bool wallpapers: false
 
     // The y centre (in window coordinates) of the bar icon that opened a
     // popout, so the popout tracks the icon instead of the screen's middle -
@@ -34,14 +35,22 @@ Singleton {
     onSessionChanged: if (session) {
         network = false;
         audio = false;
+        wallpapers = false;
     }
     onNetworkChanged: if (network) {
         session = false;
         audio = false;
+        wallpapers = false;
     }
     onAudioChanged: if (audio) {
         session = false;
         network = false;
+        wallpapers = false;
+    }
+    onWallpapersChanged: if (wallpapers) {
+        session = false;
+        network = false;
+        audio = false;
     }
 
     function showTooltip(owner: Item, text: string, y: real): void {

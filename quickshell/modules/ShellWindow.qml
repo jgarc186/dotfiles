@@ -17,6 +17,7 @@ import "border"
 import "network"
 import "session"
 import "volume"
+import "wallpapers"
 import qs.components
 import qs.config
 import qs.services
@@ -58,6 +59,18 @@ StyledWindow {
 
         Region {
             item: volume
+        }
+
+        // Both halves of the wallpaper picker have to be here, and this is the
+        // only reason the bottom edge is clickable at all: everything outside the
+        // mask passes straight through to the desktop, which is what the rest of
+        // the decorative frame does.
+        Region {
+            item: wallpaperZone
+        }
+
+        Region {
+            item: wallpapers
         }
     }
 
@@ -174,6 +187,97 @@ StyledWindow {
         }
     }
 
+    // The bottom edge of the frame, as a trigger for the wallpaper picker.
+    //
+    // Invisible and narrow on purpose: it is masked into the shell's input
+    // region, so its width is width the desktop below stops receiving clicks on.
+    // Collapsed to nothing under a fullscreen window - the frame is already gone
+    // there, and a live strip over a fullscreen video would swallow clicks meant
+    // for it.
+    Item {
+        id: wallpaperZone
+
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        implicitWidth: root.fullscreen ? 0 : Config.wallpapers.hotZoneWidth
+        implicitHeight: root.fullscreen ? 0 : Config.border.thickness
+
+        MouseArea {
+            id: wallpaperHotZone
+
+            anchors.fill: parent
+            hoverEnabled: !root.fullscreen
+
+            // Opening on a dwell rather than on entry, so a pointer crossing the
+            // bottom edge on its way somewhere else doesn't drag the panel up
+            onEntered: wallpaperDwell.restart()
+            onExited: wallpaperDwell.stop()
+        }
+
+        Timer {
+            id: wallpaperDwell
+
+            interval: Config.wallpapers.dwell
+            onTriggered: ShellState.wallpapers = true
+        }
+    }
+
+    // Closing is on a grace timer rather than immediate: the pointer has to cross
+    // the gap between the zone and the panel to reach it.
+    readonly property bool wallpapersHovered: wallpaperHotZone.containsMouse || wallpaperPanelHover.hovered
+
+    onWallpapersHoveredChanged: {
+        if (wallpapersHovered)
+            wallpaperClose.stop();
+        else if (ShellState.wallpapers)
+            wallpaperClose.restart();
+    }
+
+    Timer {
+        id: wallpaperClose
+
+        interval: Config.wallpapers.closeDelay
+        onTriggered: ShellState.wallpapers = false
+    }
+
+    // Wallpaper picker, rising out of the bottom edge rather than pinned to a bar
+    // icon, so it gets neither the icon tracking nor the vertical clamp the
+    // others need.
+    Loader {
+        id: wallpapers
+
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Config.border.thickness
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        active: ShellState.wallpapers || opacity > 0
+        opacity: ShellState.wallpapers ? 1 : 0
+        scale: ShellState.wallpapers ? 1 : 0.85
+        transformOrigin: Item.Bottom
+
+        sourceComponent: WallpaperPicker {}
+
+        // A HoverHandler rather than a MouseArea: the picker's own items are
+        // MouseAreas, and a parent MouseArea would never see the pointer once it
+        // was over one of them - which is every part of the panel worth hovering.
+        HoverHandler {
+            id: wallpaperPanelHover
+        }
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
     // Bar tooltips live here because BarWrapper clips its contents. Hidden
     // while a popout is open, since both occupy the same strip of screen.
     Loader {
@@ -182,7 +286,7 @@ StyledWindow {
         // Held over while the bubble fades out, so it doesn't blank mid-fade
         property string lastText: ShellState.tooltipText
 
-        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.wallpapers
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
@@ -214,12 +318,13 @@ StyledWindow {
 
     // Click outside to dismiss
     HyprlandFocusGrab {
-        active: ShellState.session || ShellState.network || ShellState.audio
+        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.wallpapers
         windows: [root]
         onCleared: {
             ShellState.session = false;
             ShellState.network = false;
             ShellState.audio = false;
+            ShellState.wallpapers = false;
         }
     }
 }
