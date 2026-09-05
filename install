@@ -63,3 +63,5 @@ ln -s $DOTFILES/scripts/roadmap-to-jira $HOME/.local/bin/roadmap-to-jira
 
 rm -rf $HOME/.local/bin/theme-mode
 ln -s $DOTFILES/scripts/theme-mode $HOME/.local/bin/theme-mode
+
+git -C $DOTFILES config core.hooksPath scripts/hooks

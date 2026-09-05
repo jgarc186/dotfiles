@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+#
+# Pre-push hook: runs only the test suites affected by what's being pushed.
+#
+# Wired up via `git config core.hooksPath scripts/hooks` (done by ./install),
+# so this file is the actual hook - not a copy sitting in .git/hooks, which
+# isn't tracked and wouldn't survive a fresh clone.
+#
+# git calls a pre-push hook with the remote name/url as args and feeds it one
+# line per ref being updated on stdin: "<local ref> <local sha> <remote ref>
+# <remote sha>". We diff each range being pushed to collect the files that
+# would land on the remote, rather than just the tip commit - a `git push`
+# after several local commits should still catch all of them.
+#
+# Suite -> trigger paths:
+#   hypr/tests/run_tests.lua        <- hypr/
+#   nvim headless test runner       <- nvim/, matugen/  (test_theme reads the
+#                                      matugen template directly)
+#   quickshell/tests/run_tests.sh   <- quickshell/
+#   tmux/tests/run_tests.sh         <- tmux/, matugen/  (checks
+#                                      matugen/templates/tmux-colors.conf and
+#                                      matugen/config.toml)
+#
+# A tool missing from PATH fails the push rather than skipping silently -
+# a suite that never ran is easy to mistake for one that passed.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT"
+
+ZERO_SHA="0000000000000000000000000000000000000000"
+EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
+changed=()
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [[ -z "${local_ref:-}" ]] && continue
+
+    # Deleting a remote ref - nothing of ours is landing, nothing to check.
+    [[ "$local_sha" == "$ZERO_SHA" ]] && continue
+
+    if [[ "$remote_sha" == "$ZERO_SHA" ]]; then
+        # New branch/tag on the remote: diff against the closest thing we
+        # have to a shared history, falling back to "everything is new".
+        base="$(git merge-base "$local_sha" origin/HEAD 2>/dev/null ||
+            git merge-base "$local_sha" origin/main 2>/dev/null ||
+            echo "$EMPTY_TREE")"
+    else
+        base="$remote_sha"
+    fi
+
+    while IFS= read -r f; do
+        [[ -n "$f" ]] && changed+=("$f")
+    done < <(git diff --name-only --diff-filter=ACMR "$base" "$local_sha")
+done
+
+if [[ ${#changed[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+touches() { # prefix
+    local prefix="$1" f
+    for f in "${changed[@]}"; do
+        [[ "$f" == "$prefix"* ]] && return 0
+    done
+    return 1
+}
+
+run_hypr=false
+run_nvim=false
+run_quickshell=false
+run_tmux=false
+
+touches "hypr/" && run_hypr=true
+touches "nvim/" && run_nvim=true
+touches "quickshell/" && run_quickshell=true
+touches "tmux/" && run_tmux=true
+if touches "matugen/"; then
+    run_nvim=true
+    run_tmux=true
+fi
+
+failed=0
+
+if $run_hypr; then
+    echo "== hypr tests =="
+    if ! command -v luajit >/dev/null; then
+        echo "luajit not found on PATH" >&2
+        failed=1
+    elif ! luajit hypr/tests/run_tests.lua; then
+        failed=1
+    fi
+    echo
+fi
+
+if $run_nvim; then
+    echo "== nvim tests =="
+    if ! command -v nvim >/dev/null; then
+        echo "nvim not found on PATH" >&2
+        failed=1
+    elif ! nvim --headless -u NONE -i NONE -l nvim/tests/run_tests.lua; then
+        failed=1
+    fi
+    echo
+fi
+
+if $run_quickshell; then
+    echo "== quickshell tests =="
+    if ! quickshell/tests/run_tests.sh; then
+        failed=1
+    fi
+    echo
+fi
+
+if $run_tmux; then
+    echo "== tmux tests =="
+    if ! command -v tmux >/dev/null; then
+        echo "tmux not found on PATH" >&2
+        failed=1
+    elif ! tmux/tests/run_tests.sh; then
+        failed=1
+    fi
+    echo
+fi
+
+if ((failed)); then
+    echo "pre-push: one or more test suites failed" >&2
+    exit 1
+fi
+
+exit 0

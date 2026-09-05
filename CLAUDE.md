@@ -29,6 +29,39 @@ Anything touching the theming runs in **both modes**: the suites assert against
 whichever mode matugen last ran in, so a light-only run proves half of it.
 `theme-mode light && <suite> && theme-mode dark && <suite>`.
 
+## Git Hooks
+
+`./install` sets `core.hooksPath` to `scripts/hooks`, so the hooks live as
+tracked files in the repo rather than untracked ones under `.git/hooks` that a
+fresh clone would never get. Two hooks:
+
+- **`scripts/hooks/pre-commit`** — formats and lints the files being staged,
+  re-adding anything a formatter rewrites:
+  - `*.lua` → `stylua` (format), then `luacheck` (lint; any warning blocks the
+    commit). Config: `stylua.toml` (spaces, width 4, `AutoPreferDouble` —
+    stylua's own default is tabs, which would reformat the whole repo) and
+    `.luacheckrc` (declares `hl` and `vim` as known globals, since hypr's
+    Hyprland-Lua-API global and nvim's own aren't in plain `luajit` std).
+  - `*.qml` → `qmlformat -i` per file, then — if any `.qml` was staged — the
+    existing `quickshell/tests/run_tests.sh` for linting. That suite (not a
+    per-file `qmllint` call here) is what resolves `import qs.*`, which needs
+    the whole tree mirrored; see Quickshell Config Tests.
+  - `*.sh`, or an extensionless file with a bash/sh/dash shebang → `shfmt -i 4
+    -w` (format only). No lint step: `shellcheck` isn't packaged for
+    aarch64/Asahi and isn't installed here — add the check once it is.
+  - A tool missing from `PATH` fails the commit rather than skipping silently.
+- **`scripts/hooks/pre-push`** — runs only the test suites (see Tests above)
+  affected by what's being pushed. Reads `<local ref> <local sha> <remote ref>
+  <remote sha>` from stdin per git's pre-push protocol, diffs each range being
+  pushed (falling back to a merge-base against `origin/HEAD`/`origin/main` for
+  a brand-new branch) and unions the changed paths across all refs in the
+  push — so pushing several local commits at once still catches every one of
+  them, not just the tip. A tool missing from `PATH` fails the push.
+
+Since the linters are new, a pre-existing file with a lint warning will block
+the first commit that touches it, not just ones that introduce a new warning —
+that's expected, not a regression.
+
 ## Color Theming (Matugen)
 
 The central theming system is **Matugen** (Material Design 3 color generator). Running it regenerates color files across all apps:
@@ -108,7 +141,7 @@ Each top-level directory maps to one tool:
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
 - `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`); colours from catppuccin, flavour chosen by the mode in `colors.conf`
 - `matugen/` — Theme generator config and templates
-- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`)
+- `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`); `hooks/`: the tracked pre-commit/pre-push hooks, see Git Hooks
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
 - `starship/starship.toml` — Shell prompt (Catppuccin Mocha palette)
 
@@ -583,3 +616,5 @@ When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), t
 - `quickshell/config/Config.qml` — Quickshell shell settings
 - `matugen/config.toml` — Template mapping for color generation
 - `arch_linux/pkglist.txt` — Pacman package list for system reproducibility
+- `scripts/hooks/pre-commit` — Formats/lints staged files; see Git Hooks
+- `scripts/hooks/pre-push` — Runs test suites affected by what's being pushed; see Git Hooks

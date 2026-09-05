@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: formats and lints the files being committed, then re-stages
+# anything a formatter rewrote.
+#
+# Wired up via `git config core.hooksPath scripts/hooks` (done by ./install),
+# so this file is the actual hook - not a copy sitting in .git/hooks, which
+# isn't tracked and wouldn't survive a fresh clone.
+#
+# File type -> tools:
+#   *.lua                             stylua (format), luacheck (lint) - both
+#                                      auto-discover stylua.toml/.luacheckrc
+#                                      by searching upward, so cwd is $ROOT.
+#   *.qml                             qmlformat (format, per file); linting is
+#                                      the existing quickshell/tests/run_tests.sh
+#                                      rather than a re-implementation here -
+#                                      it needs the whole tree mirrored so
+#                                      `import qs.*` resolves, which a
+#                                      per-file qmllint call can't do alone.
+#   *.sh, or an extensionless file     shfmt (format only - shellcheck isn't
+#   with a bash/sh/dash shebang        packaged for aarch64/Asahi and isn't
+#                                      installed; add a lint step once it is).
+#
+# A tool missing from PATH fails the commit rather than skipping silently -
+# a check that never ran is easy to mistake for one that passed.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT"
+
+QMLFORMAT="${QMLFORMAT:-/usr/lib/qt6/bin/qmlformat}"
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [[ ${#staged[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+is_shell() { # file
+    case "$1" in
+    *.sh) return 0 ;;
+    esac
+    [[ -f "$1" ]] || return 1
+    head -n1 "$1" 2>/dev/null | grep -qE '^#!.*(/|[[:space:]])(bash|sh|dash)$'
+}
+
+failed=0
+touched_qml=false
+
+for f in "${staged[@]}"; do
+    [[ -f "$f" ]] || continue
+
+    case "$f" in
+    *.lua)
+        if ! command -v stylua >/dev/null; then
+            echo "stylua not found on PATH" >&2
+            failed=1
+        elif ! stylua "$f"; then
+            failed=1
+        else
+            git add "$f"
+        fi
+
+        if ! command -v luacheck >/dev/null; then
+            echo "luacheck not found on PATH" >&2
+            failed=1
+        elif ! luacheck "$f"; then
+            failed=1
+        fi
+        ;;
+    *.qml)
+        touched_qml=true
+        if [[ ! -x "$QMLFORMAT" ]]; then
+            echo "qmlformat not found at $QMLFORMAT (set QMLFORMAT=)" >&2
+            failed=1
+        elif ! "$QMLFORMAT" -i "$f"; then
+            failed=1
+        else
+            git add "$f"
+        fi
+        ;;
+    esac
+
+    if is_shell "$f"; then
+        if ! command -v shfmt >/dev/null; then
+            echo "shfmt not found on PATH" >&2
+            failed=1
+        elif ! shfmt -i 4 -w "$f"; then
+            failed=1
+        else
+            git add "$f"
+        fi
+    fi
+done
+
+if $touched_qml; then
+    echo "== quickshell lint (qmllint, whole tree) =="
+    if ! quickshell/tests/run_tests.sh; then
+        failed=1
+    fi
+fi
+
+if ((failed)); then
+    echo "pre-commit: formatting/linting failed" >&2
+    exit 1
+fi
+
+exit 0
