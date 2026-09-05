@@ -618,3 +618,4 @@ When editing a `hypr/modules/*.lua` file: update its `test_*.lua` first (red), t
 - `arch_linux/pkglist.txt` — Pacman package list for system reproducibility
 - `scripts/hooks/pre-commit` — Formats/lints staged files; see Git Hooks
 - `scripts/hooks/pre-push` — Runs test suites affected by what's being pushed; see Git Hooks
+
