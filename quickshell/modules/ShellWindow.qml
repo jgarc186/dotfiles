@@ -46,19 +46,29 @@ StyledWindow {
     // The Wi-Fi popout has a password field, so it needs keys too
     WlrLayershell.keyboardFocus: ShellState.session || ShellState.network ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
+    // Every popout is `item: <loader>.active ? <loader> : null`, never the bare
+    // loader. A Loader that has been active once keeps that size for good after
+    // `active` goes false - Qt only grows it, it never collapses back to 0 - so a
+    // bare item leaves the popout's whole rectangle in the input mask
+    // permanently. Invisible, but this window spans the screen at WlrLayer.Top,
+    // so it swallows every click in that rectangle: open the Wi-Fi popout once
+    // and the browser under it stops responding in a 320px-wide strip. The
+    // wallpaper picker is the bad one, since it is nearly screen-wide and opens
+    // on hover. `active` stays true through the fade-out, so a closing popout
+    // still takes its own clicks.
     mask: Region {
         item: bar
 
         Region {
-            item: session
+            item: session.active ? session : null
         }
 
         Region {
-            item: network
+            item: network.active ? network : null
         }
 
         Region {
-            item: volume
+            item: volume.active ? volume : null
         }
 
         // Both halves of the wallpaper picker have to be here, and this is the
@@ -70,7 +80,7 @@ StyledWindow {
         }
 
         Region {
-            item: wallpapers
+            item: wallpapers.active ? wallpapers : null
         }
     }
 

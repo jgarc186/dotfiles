@@ -296,6 +296,17 @@ from a moving average over the radii. The focused workspace picks a random shape
 each time focus lands on it, which is where most of the "expressive" feel lives.
 
 **Gotchas found by running it (the linter can't catch these):**
+- **A `Loader` never shrinks back to zero.** Once `active` has been true, the
+  loader keeps that size after `active` goes false (a loader that was never
+  activated is 0). So `mask: Region { item: <loader> }` leaves the popout's whole
+  rectangle in the input region permanently — invisible, but `ShellWindow` spans
+  the screen at `WlrLayer.Top`, so it eats every click there. It showed up as a
+  browser going dead in patches: open the Wi-Fi popout once and a 320px strip of
+  the window below stops responding, and the wallpaper picker — nearly
+  screen-wide, opened by hovering the bottom edge — kills most of the bottom of
+  the screen. Every popout region is `item: <loader>.active ? <loader> : null`
+  for that reason; `active` stays true through the fade-out, so a closing popout
+  still takes its own clicks.
 - `implicitWidth`/`implicitHeight` are read-only on `Text`, so `MaterialIcon` is
   an `Item` wrapping a `StyledText` rather than a `Text` subclass. That's also
   what keeps the bar layout intact when Material Symbols isn't installed and
