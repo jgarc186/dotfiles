@@ -94,6 +94,10 @@ Singleton {
     }
 
     component StatusIconsConfig: QtObject {
-        readonly property list<string> entries: ["memory", "audio", "network", "bluetooth", "battery"]
+        readonly property list<string> entries: ["memory", "disk", "audio", "network", "bluetooth", "battery"]
+        // The filesystem the "disk" entry reports on, as a path `df` can take.
+        // "/" rather than $HOME since home is on the root partition here; point
+        // it at a mountpoint if that stops being true.
+        readonly property string diskPath: "/"
     }
 }

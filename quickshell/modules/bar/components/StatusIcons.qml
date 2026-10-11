@@ -1,5 +1,5 @@
 //
-// The status pill: volume, network, bluetooth, battery.
+// The status pill: memory, disk, volume, network, bluetooth, battery.
 //
 pragma ComponentBehavior: Bound
 
@@ -39,6 +39,8 @@ StyledRect {
                     switch (modelData) {
                     case "memory":
                         return memoryComp;
+                    case "disk":
+                        return diskComp;
                     case "audio":
                         return audioComp;
                     case "microphone":
@@ -65,6 +67,18 @@ StyledRect {
 
             // Only poll every second while the tooltip is actually up
             onHoveredChanged: hovered ? Mem.watch() : Mem.unwatch()
+        }
+    }
+
+    Component {
+        id: diskComp
+
+        HoverIcon {
+            icon: "hard_drive"
+            tooltip: Disk.summary
+
+            // Only poll at the faster rate while the tooltip is actually up
+            onHoveredChanged: hovered ? Disk.watch() : Disk.unwatch()
         }
     }
 
