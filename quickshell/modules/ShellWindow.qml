@@ -16,6 +16,7 @@ import "bar"
 import "border"
 import "network"
 import "session"
+import "storage"
 import "volume"
 import "wallpapers"
 import qs.components
@@ -69,6 +70,10 @@ StyledWindow {
 
         Region {
             item: volume.active ? volume : null
+        }
+
+        Region {
+            item: storage.active ? storage : null
         }
 
         // Both halves of the wallpaper picker have to be here, and this is the
@@ -197,6 +202,35 @@ StyledWindow {
         }
     }
 
+    // Storage popout, pinned to the disk icon the same way as the Wi-Fi one.
+    Loader {
+        id: storage
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.diskY - height / 2))
+
+        active: ShellState.disk || opacity > 0
+        opacity: ShellState.disk ? 1 : 0
+        scale: ShellState.disk ? 1 : 0.85
+        transformOrigin: Item.Left
+
+        sourceComponent: Storage {}
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
     // The bottom edge of the frame, as a trigger for the wallpaper picker.
     //
     // Invisible and narrow on purpose: it is masked into the shell's input
@@ -309,7 +343,7 @@ StyledWindow {
         // Held over while the bubble fades out, so it doesn't blank mid-fade
         property string lastText: ShellState.tooltipText
 
-        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.wallpapers
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.disk && !ShellState.wallpapers
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
@@ -345,12 +379,13 @@ StyledWindow {
         // closes when the pointer leaves, so it never needs click-outside-to-
         // dismiss - and taking a grab for it costs the pointer events it lives
         // on.
-        active: ShellState.session || ShellState.network || ShellState.audio
+        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.disk
         windows: [root]
         onCleared: {
             ShellState.session = false;
             ShellState.network = false;
             ShellState.audio = false;
+            ShellState.disk = false;
             ShellState.wallpapers = false;
         }
     }

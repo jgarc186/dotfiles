@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+#
+# What the disk is being used for, by kind of file - for the storage popout
+# that opens from the bar's disk icon (services/Disk.qml runs this).
+#
+# Prints tab-separated records:
+#   cat <key> <bytes>      space used per category, one line each
+#   scanned <bytes>        everything this scan counted
+#   big <bytes> <path>     the largest files, biggest first
+#
+# Only $HOME and /var/cache are walked. Everything else on the disk is the OS
+# and installed packages, which the shell reports as `df used - scanned` rather
+# than walking /usr as an unprivileged user - most of it would be unreadable,
+# and none of it sorts into videos or photos anyway.
+#
+# Sizes are allocated blocks (%b), not apparent size (%s): a sparse VM image
+# such as Docker Desktop's Docker.raw claims 915G and occupies 74G, and an
+# apparent-size sum would report more used than the disk holds.
+#
+# Classification is by path first (caches, trash, dependency trees), then by
+# extension. A video inside node_modules is dev clutter, not your video.
+#
+set -uo pipefail
+
+top="${1:-5}"
+roots=("$HOME")
+[[ -d /var/cache ]] && roots+=(/var/cache)
+
+# A full walk of a busy home takes tens of seconds, so stay out of the way of
+# anything interactive
+lowprio=(nice -n 19)
+command -v ionice >/dev/null && lowprio+=(ionice -c 3)
+
+# find exits non-zero on any unreadable directory, which under /var/cache is a
+# given; the totals from what it could read are still the answer
+{ "${lowprio[@]}" find -P "${roots[@]}" -xdev -type f -printf '%b\t%p\n' 2>/dev/null || true; } |
+    LC_ALL=C awk -F'\t' -v home="$HOME" -v top="$top" '
+    function add(kind, list,    n, i, e) {
+        n = split(list, e, " ")
+        for (i = 1; i <= n; i++)
+            ext[e[i]] = kind
+    }
+
+    BEGIN {
+        add("videos", "mp4 mkv mov avi webm m4v wmv flv mpg mpeg 3gp")
+        add("photos", "jpg jpeg png gif webp heic heif bmp tif tiff avif svg cr2 cr3 nef arw dng orf rw2 psd xcf kra")
+        add("audio", "mp3 flac wav ogg opus m4a aac wma aiff alac mid midi")
+        add("documents", "pdf doc docx odt rtf txt md epub mobi xls xlsx ods csv ppt pptx odp")
+        add("archives", "zip tar gz tgz xz zst bz2 7z rar lz4 lzma deb rpm")
+        # "raw" is here rather than under photos: a camera raw has its own
+        # extension (cr2, nef...), while a bare .raw is a disk image
+        add("images", "iso img raw vdi vmdk qcow2 vhd vhdx ova")
+        add("dev", "js mjs cjs ts tsx jsx php py go rs c h cc cpp hpp java kt cs rb lua json map wasm so a o class jar node pyc whl")
+    }
+
+    NF >= 2 {
+        bytes = $1 * 512
+        path = substr($0, index($0, "\t") + 1)
+
+        rel = index(path, home "/") == 1 ? substr(path, length(home) + 1) : ""
+
+        # The last dot in the last path component, without a split per line:
+        # this runs once per file, and a home with a few node_modules trees is
+        # well over a million of them
+        e = match(path, /\.[^.\/]+$/) ? tolower(substr(path, RSTART + 1)) : ""
+        # Test membership before reading: a bare ext[e] creates the key, and
+        # every unknown extension would then classify as ""
+        known = (e in ext) ? ext[e] : ""
+
+        if (path ~ /^\/var\/cache\// || rel ~ /^\/\.cache\//)
+            kind = "cache"
+        else if (rel ~ /^\/\.local\/share\/Trash\//)
+            kind = "trash"
+        else if (known == "images")
+            kind = "images"
+        else if (path ~ /\/(node_modules|\.git|\.venv|venv|__pycache__|vendor)\// || rel ~ /^\/(go|\.cargo|\.rustup|\.npm|\.nuget|\.dotnet|\.m2|\.gradle|\.bun|\.pnpm-store|\.yarn|\.composer)\//)
+            kind = "dev"
+        else if (known != "")
+            kind = known
+        else
+            kind = "other"
+
+        sum[kind] += bytes
+        total += bytes
+
+        # Keep the `top` largest, sorted, by insertion
+        if (count < top || bytes > size[count]) {
+            if (count < top)
+                count++
+            for (i = count; i > 1 && size[i - 1] < bytes; i--) {
+                size[i] = size[i - 1]
+                file[i] = file[i - 1]
+            }
+            size[i] = bytes
+            file[i] = path
+        }
+    }
+
+    END {
+        for (kind in sum)
+            printf "cat\t%s\t%.0f\n", kind, sum[kind]
+        printf "scanned\t%.0f\n", total
+        for (i = 1; i <= count; i++)
+            printf "big\t%.0f\t%s\n", size[i], file[i]
+    }
+'

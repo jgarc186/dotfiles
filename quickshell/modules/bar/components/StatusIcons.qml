@@ -70,15 +70,54 @@ StyledRect {
         }
     }
 
+    // Hovering reports free space, clicking opens the storage breakdown
     Component {
         id: diskComp
 
-        HoverIcon {
-            icon: "hard_drive"
-            tooltip: Disk.summary
+        Item {
+            id: disk
 
-            // Only poll at the faster rate while the tooltip is actually up
-            onHoveredChanged: hovered ? Disk.watch() : Disk.unwatch()
+            readonly property string tooltip: Disk.summary
+
+            implicitWidth: diskIcon.implicitWidth
+            implicitHeight: diskIcon.implicitHeight
+
+            onTooltipChanged: ShellState.updateTooltip(disk, tooltip)
+
+            StateLayer {
+                // Square the hit area up without stretching the row
+                anchors.fill: undefined
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: diskIcon.implicitHeight + Appearance.padding.small
+                radius: Appearance.rounding.full
+                color: root.colour
+
+                onClicked: {
+                    ShellState.diskY = disk.mapToItem(null, 0, disk.height / 2).y;
+                    ShellState.disk = !ShellState.disk;
+                }
+                // Only poll at the faster rate while the tooltip is actually up
+                onEntered: {
+                    Disk.watch();
+                    ShellState.showTooltip(disk, disk.tooltip, disk.mapToItem(null, 0, disk.height / 2).y);
+                }
+                onExited: {
+                    Disk.unwatch();
+                    ShellState.hideTooltip(disk);
+                }
+            }
+
+            MaterialIcon {
+                id: diskIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: "hard_drive"
+                color: root.colour
+                fill: ShellState.disk ? 1 : 0
+            }
         }
     }
 

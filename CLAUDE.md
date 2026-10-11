@@ -246,7 +246,9 @@ Structure:
   (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
   also scans, connects and disconnects for the Wi-Fi popout), `Mem`
   (`/proc/meminfo`), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
-  `ShellState`, `Wallpapers` (the list, the one in use, and the live preview).
+  `ShellState`, `Wallpapers` (the list, the one in use, and the live preview),
+  `Disk` (`df` for the tooltip, plus a by-file-kind breakdown for the storage
+  popout from `quickshell/scripts/disk-usage`).
   `services/Scheme.qml` is matugen output — never edit it; it is an instance of
   `services/M3Palette.qml`, which is the writable shape `Colours` keeps a second
   copy of for previewing.
@@ -260,12 +262,13 @@ Structure:
   presets), `Tooltip`, and `MaterialShape`.
 - `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
   `network/` (the Wi-Fi popout), `volume/` (the sink volume popout),
+  `storage/` (what the disk is used for, opened from the disk icon),
   `wallpapers/` (the bottom-edge wallpaper picker).
 
 Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
 widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
 widget drew beside itself would be cut off at the bar's edge. A widget flips a
-flag on `ShellState` (`session`, `network`, `audio` — mutually exclusive, each
+flag on `ShellState` (`session`, `network`, `audio`, `disk` — mutually exclusive, each
 handler closing the others) or calls `ShellState.showTooltip(owner, text, y)`
 with its own centre in window coordinates, and `ShellWindow` renders it, adds it
 to the input `mask`, and turns on layershell keyboard focus when a popout needs
@@ -317,6 +320,16 @@ each time focus lands on it, which is where most of the "expressive" feel lives.
   explicit size property instead.
 - JS `%` keeps the sign of the dividend, which silently collapses every
   odd-sided `MaterialShape` polygon to a sliver. Use a positive modulo.
+
+**The storage breakdown is a walk of the whole home directory**, ~1.8M files
+and ~18s here, so `Disk` runs `scripts/disk-usage` only when the popout opens
+and the last result is older than `Config.bar.statusIcons.diskScanMaxAge`
+(10 min), at `nice`/`ionice` idle priority, and keeps showing the old result
+while it rescans. It walks `$HOME` and `/var/cache` only; "System & apps" is
+`df used - scanned`, not a walk of `/usr`. Two things in the script were found
+by running it: sizes are allocated blocks (`%b`), since Docker Desktop's sparse
+`Docker.raw` claims 915G and occupies 74G; and the awk runs under `LC_ALL=C`
+with no per-line `split()`, which took it from 60s to 18s.
 
 ### Quickshell Config Tests
 

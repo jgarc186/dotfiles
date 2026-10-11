@@ -99,5 +99,9 @@ Singleton {
         // "/" rather than $HOME since home is on the root partition here; point
         // it at a mountpoint if that stops being true.
         readonly property string diskPath: "/"
+        // How old the storage popout's breakdown may get before opening it
+        // walks the disk again (ms). The walk takes tens of seconds, so a
+        // breakdown a few minutes old is shown rather than redone on every open.
+        readonly property int diskScanMaxAge: 600000
     }
 }
