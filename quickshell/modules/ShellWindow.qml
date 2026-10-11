@@ -13,6 +13,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import "bar"
+import "battery"
 import "border"
 import "network"
 import "session"
@@ -74,6 +75,10 @@ StyledWindow {
 
         Region {
             item: storage.active ? storage : null
+        }
+
+        Region {
+            item: battery.active ? battery : null
         }
 
         // Both halves of the wallpaper picker have to be here, and this is the
@@ -231,6 +236,36 @@ StyledWindow {
         }
     }
 
+    // Battery health popout, pinned to the battery icon the same way as the
+    // Wi-Fi one.
+    Loader {
+        id: battery
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.batteryY - height / 2))
+
+        active: ShellState.battery || opacity > 0
+        opacity: ShellState.battery ? 1 : 0
+        scale: ShellState.battery ? 1 : 0.85
+        transformOrigin: Item.Left
+
+        sourceComponent: Battery {}
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
     // The bottom edge of the frame, as a trigger for the wallpaper picker.
     //
     // Invisible and narrow on purpose: it is masked into the shell's input
@@ -343,7 +378,7 @@ StyledWindow {
         // Held over while the bubble fades out, so it doesn't blank mid-fade
         property string lastText: ShellState.tooltipText
 
-        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.disk && !ShellState.wallpapers
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.disk && !ShellState.battery && !ShellState.wallpapers
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
@@ -379,13 +414,14 @@ StyledWindow {
         // closes when the pointer leaves, so it never needs click-outside-to-
         // dismiss - and taking a grab for it costs the pointer events it lives
         // on.
-        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.disk
+        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.disk || ShellState.battery
         windows: [root]
         onCleared: {
             ShellState.session = false;
             ShellState.network = false;
             ShellState.audio = false;
             ShellState.disk = false;
+            ShellState.battery = false;
             ShellState.wallpapers = false;
         }
     }

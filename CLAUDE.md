@@ -243,7 +243,8 @@ Structure:
   `icons` list, falling back to `defaultIcon`).
 - `services/` — singletons wrapping system state: `Colours` (matugen palette plus
   M3 layer/transparency helpers), `Hypr`, `Time`, `Audio` (Pipewire), `Batt`
-  (UPower), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
+  (UPower, plus cycles/temperature/design capacity from the battery's sysfs
+  `uevent` for the battery popout), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
   also scans, connects and disconnects for the Wi-Fi popout), `Mem`
   (`/proc/meminfo`), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
   `ShellState`, `Wallpapers` (the list, the one in use, and the live preview),
@@ -257,18 +258,26 @@ Structure:
   so `watchChanges` is out, but `FileView` reads them correctly and `reload()`
   re-reads rather than serving a cache. It polls every 5s, or every second while
   something is showing the numbers (`Mem.watch()` / `Mem.unwatch()`).
+
+  `Batt` keeps two UPower devices apart. `UPower.displayDevice` drives the icon
+  and tooltip, but it is a composite and reports **no health** (`healthSupported`
+  false, 0%) even when the battery behind it does — so health comes from the
+  real laptop battery, found in `UPower.devices` by `isLaptopBattery`. Its
+  `healthPercentage` is 0–100, unlike `percentage`, which is 0–1. The sysfs
+  `uevent` is polled every 5s, only while the popout is open (`Batt.watch()`).
 - `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
   + press ripple), `StyledSlider`, `Anim`/`CAnim` (the motion tokens as animation
   presets), `Tooltip`, and `MaterialShape`.
 - `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
   `network/` (the Wi-Fi popout), `volume/` (the sink volume popout),
   `storage/` (what the disk is used for, opened from the disk icon),
+  `battery/` (charge and battery health, opened from the battery icon),
   `wallpapers/` (the bottom-edge wallpaper picker).
 
 Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
 widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
 widget drew beside itself would be cut off at the bar's edge. A widget flips a
-flag on `ShellState` (`session`, `network`, `audio`, `disk` — mutually exclusive, each
+flag on `ShellState` (`session`, `network`, `audio`, `disk`, `battery` — mutually exclusive, each
 handler closing the others) or calls `ShellState.showTooltip(owner, text, y)`
 with its own centre in window coordinates, and `ShellWindow` renders it, adds it
 to the input `mask`, and turns on layershell keyboard focus when a popout needs
@@ -300,6 +309,19 @@ from a moving average over the radii. The focused workspace picks a random shape
 each time focus lands on it, which is where most of the "expressive" feel lives.
 
 **Gotchas found by running it (the linter can't catch these):**
+- **Create a new module's files before importing it.** Quickshell reloads the
+  moment a watched file changes, so adding `import "foo"` to `ShellWindow.qml`
+  before `modules/foo/` exists fails the reload (`Foo is not a type`) — and a
+  failed reload keeps the *previous* config running and doesn't watch the new
+  directory, so creating it afterwards changes nothing. The new feature looks
+  dead with no visible error; `qs log` shows it. `touch` doesn't retrigger
+  (attribute change only); rewriting a watched file's contents does.
+- **Edit in place, never by rename.** The watch is on the inode, so `sed -i`
+  (and any tool that writes a temp file and renames it over) leaves that file
+  unwatched: the edit never reloads, and later edits to it won't either until
+  some *other* file triggers a reload, which re-arms every watch. Confirm a
+  reload happened by the count of `Reloading` lines in `qs log` going up — the
+  tail alone just shows the previous reload.
 - **A `Loader` never shrinks back to zero.** Once `active` has been true, the
   loader keeps that size after `active` goes false (a loader that was never
   activated is 0). So `mask: Region { item: <loader> }` leaves the popout's whole

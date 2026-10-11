@@ -13,6 +13,7 @@ Singleton {
     property bool network: false
     property bool audio: false
     property bool disk: false
+    property bool battery: false
     property bool wallpapers: false
 
     // The y centre (in window coordinates) of the bar icon that opened a
@@ -22,6 +23,7 @@ Singleton {
     property real networkY: 0
     property real audioY: 0
     property real diskY: 0
+    property real batteryY: 0
 
     // Bar tooltip: the text to show, and the y centre (in window coordinates)
     // of the widget that asked for it. The owner is tracked so that a pointer
@@ -38,24 +40,35 @@ Singleton {
         network = false;
         audio = false;
         disk = false;
+        battery = false;
         wallpapers = false;
     }
     onNetworkChanged: if (network) {
         session = false;
         audio = false;
         disk = false;
+        battery = false;
         wallpapers = false;
     }
     onAudioChanged: if (audio) {
         session = false;
         network = false;
         disk = false;
+        battery = false;
         wallpapers = false;
     }
     onDiskChanged: if (disk) {
         session = false;
         network = false;
         audio = false;
+        battery = false;
+        wallpapers = false;
+    }
+    onBatteryChanged: if (battery) {
+        session = false;
+        network = false;
+        audio = false;
+        disk = false;
         wallpapers = false;
     }
     onWallpapersChanged: if (wallpapers) {
@@ -63,6 +76,7 @@ Singleton {
         network = false;
         audio = false;
         disk = false;
+        battery = false;
     }
 
     function showTooltip(owner: Item, text: string, y: real): void {

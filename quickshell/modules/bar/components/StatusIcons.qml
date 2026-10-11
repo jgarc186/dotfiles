@@ -240,15 +240,50 @@ StyledRect {
     }
 
     // Hovering reports the charge level and, when UPower has an estimate, how
-    // long it lasts
+    // long it lasts; clicking opens the battery health popout
     Component {
         id: batteryComp
 
-        HoverIcon {
+        Item {
+            id: batt
+
+            readonly property string tooltip: Batt.summary
+            readonly property color colour: Batt.low ? Colours.palette.m3error : root.colour
+
             visible: Batt.available
-            icon: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
-            colour: Batt.low ? Colours.palette.m3error : root.colour
-            tooltip: Batt.summary
+            implicitWidth: battIcon.implicitWidth
+            implicitHeight: battIcon.implicitHeight
+
+            onTooltipChanged: ShellState.updateTooltip(batt, tooltip)
+            onVisibleChanged: if (!visible)
+                ShellState.hideTooltip(batt)
+
+            StateLayer {
+                // Square the hit area up without stretching the row
+                anchors.fill: undefined
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: battIcon.implicitHeight + Appearance.padding.small
+                radius: Appearance.rounding.full
+                color: batt.colour
+
+                onClicked: {
+                    ShellState.batteryY = batt.mapToItem(null, 0, batt.height / 2).y;
+                    ShellState.battery = !ShellState.battery;
+                }
+                onEntered: ShellState.showTooltip(batt, batt.tooltip, batt.mapToItem(null, 0, batt.height / 2).y)
+                onExited: ShellState.hideTooltip(batt)
+            }
+
+            MaterialIcon {
+                id: battIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
+                color: batt.colour
+            }
         }
     }
 
