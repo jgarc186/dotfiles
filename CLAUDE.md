@@ -222,9 +222,10 @@ C++ plugin (`Caelestia.Config`, `Caelestia.Blobs`, `M3Shapes`), while this runs
 on the stock Arch `quickshell` package with no compiled dependencies.
 
 Run it with `qs -p ~/developer/dotfiles/quickshell` (or `qs` once installed, since
-the install script symlinks it to `~/.config/quickshell`). It is **not** in
-`hypr/modules/autostart.lua` — waybar still is, and running both gives you two
-bars. Swap the autostart entry when you're ready to switch.
+the install script symlinks it to `~/.config/quickshell`). It **is** the bar
+`hypr/modules/autostart.lua` starts, in waybar's old slot — the switch is done.
+`waybar/` is still in the repo and still themed by matugen, so starting it by
+hand works, but running both at once gives you two bars.
 
 Layout: a left vertical bar sitting inside a rounded frame drawn around the whole
 screen — OS icon, workspaces, spacer, tray, status icons, vertical clock, power.

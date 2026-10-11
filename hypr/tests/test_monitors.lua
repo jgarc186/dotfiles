@@ -19,9 +19,10 @@ assert_util.equal(calls[1].args, {
     mirror = "HDMI-A-1",
 }, "default catch-all monitor mismatch")
 
+-- The external panel is pinned to scale 1, not "auto" like the catch-all above.
 assert_util.equal(calls[2].args, {
     output = "HDMI-A-1",
     mode = "highres",
     position = "auto",
-    scale = "auto",
+    scale = "1",
 }, "HDMI-A-1 monitor mismatch")
