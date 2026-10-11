@@ -53,7 +53,11 @@ StyledRect {
             id: items
 
             model: ScriptModel {
+                // Same as in Bt: SystemTray.items is an ObjectModel, whose
+                // `values` list the linter can't see on the untyped handle.
+                // qmllint disable missing-property
                 values: SystemTray.items.values.filter(i => !Config.bar.tray.hiddenIcons.includes(i.id))
+                // qmllint enable missing-property
             }
 
             TrayItem {}

@@ -40,7 +40,7 @@ StyledClippingRect {
             active: Config.bar.workspaces.occupiedBg
 
             sourceComponent: OccupiedBg {
-                workspaces: workspaces
+                workspaces: wsRepeater
                 occupied: root.occupied
                 groupOffset: root.groupOffset
                 shown: Config.bar.workspaces.shown
@@ -55,7 +55,7 @@ StyledClippingRect {
 
             sourceComponent: ActiveIndicator {
                 activeWsId: root.activeWsId
-                workspaces: workspaces
+                workspaces: wsRepeater
                 mask: layout
                 shown: Config.bar.workspaces.shown
             }
@@ -68,7 +68,7 @@ StyledClippingRect {
             spacing: Appearance.spacing.extraSmall
 
             Repeater {
-                id: workspaces
+                id: wsRepeater
 
                 model: Config.bar.workspaces.shown
 
