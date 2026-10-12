@@ -157,6 +157,8 @@ StyledRect {
             icon: "device_thermostat"
             label: "Temperature"
             value: `${(Batt.temperature * 9 / 5 + 32).toFixed(1)} °F`
+            // Same roles as the health rating's Fair and Poor
+            colour: Batt.hot ? Colours.palette.m3error : Batt.warm ? Colours.palette.m3tertiary : "transparent"
         }
 
         InfoRow {
@@ -181,13 +183,15 @@ StyledRect {
         property string icon
         property string label
         property string value
+        // A warning tint for the whole row; transparent for the normal colours
+        property color colour: "transparent"
 
         Layout.fillWidth: true
         spacing: Appearance.spacing.medium
 
         MaterialIcon {
             text: row.icon
-            color: Colours.palette.m3secondary
+            color: row.colour.a > 0 ? row.colour : Colours.palette.m3secondary
         }
 
         StyledText {
@@ -198,7 +202,7 @@ StyledRect {
 
         StyledText {
             text: row.value
-            color: Colours.palette.m3onSurfaceVariant
+            color: row.colour.a > 0 ? row.colour : Colours.palette.m3onSurfaceVariant
             font.pointSize: Appearance.font.size.small
         }
     }

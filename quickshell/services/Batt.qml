@@ -77,6 +77,11 @@ Singleton {
     property string manufacturer: ""
     property real designEnergy: 0
 
+    // Celsius, as reported. Up to 40 is normal for a laptop in use or
+    // charging; past 45 for long stretches ages lithium-ion faster.
+    readonly property bool warm: temperature >= 40
+    readonly property bool hot: temperature >= 45
+
     // Ref count of widgets showing the sysfs figures, so the temperature is
     // only polled while someone is looking at it
     property int watchers: 0
