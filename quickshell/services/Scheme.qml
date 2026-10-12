@@ -12,7 +12,6 @@
 // wallpaper picker fills from a `matugen --dry-run`. The role names live there,
 // so this file only assigns to them.
 //
-
 M3Palette {
     m3background: "#191113"
     m3error: "#ffb4ab"
