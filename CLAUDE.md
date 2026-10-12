@@ -246,7 +246,9 @@ Structure:
   (UPower, plus cycles/temperature/design capacity from the battery's sysfs
   `uevent` for the battery popout), `Bt`, `Net` (nmcli, driven by `nmcli monitor` rather than polling;
   also scans, connects and disconnects for the Wi-Fi popout), `Mem`
-  (`/proc/meminfo`), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
+  (`/proc/meminfo`), `Cpu` (temperature from hwmon, found by driver name at
+  startup since `hwmonN` numbering moves between boots; shown in the memory
+  tooltip), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
   `ShellState`, `Wallpapers` (the list, the one in use, and the live preview),
   `Disk` (`df` for the tooltip, plus a by-file-kind breakdown for the storage
   popout from `quickshell/scripts/disk-usage`).

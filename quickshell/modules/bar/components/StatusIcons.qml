@@ -63,10 +63,18 @@ StyledRect {
 
         HoverIcon {
             icon: "memory"
-            tooltip: Mem.summary
+            tooltip: Cpu.temperature >= 0 ? `${Mem.summary}\nCPU · ${Math.round(Cpu.temperature * 9 / 5 + 32)} °F` : Mem.summary
 
             // Only poll every second while the tooltip is actually up
-            onHoveredChanged: hovered ? Mem.watch() : Mem.unwatch()
+            onHoveredChanged: {
+                if (hovered) {
+                    Mem.watch();
+                    Cpu.watch();
+                } else {
+                    Mem.unwatch();
+                    Cpu.unwatch();
+                }
+            }
         }
     }
 
