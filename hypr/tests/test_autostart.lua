@@ -18,9 +18,19 @@ assert_util.equal(#exec_calls, 3, "expected 3 exec_cmd calls from the 3 exec-onc
 
 assert_util.equal(
     exec_calls[1].args.cmd,
-    "awww-daemon & quickshell && nm-applet & xsettingsd & swaync & swayosd-server & hyprsunset",
+    "awww-daemon & quickshell && nm-applet & xsettingsd & swayosd-server & hyprsunset",
     "first autostart command mismatch"
 )
+
+-- Quickshell is the notification daemon now (services/Notifs.qml). Only one
+-- process can own org.freedesktop.Notifications, and whichever of the two won
+-- the race at login would get every notification.
+for _, c in ipairs(exec_calls) do
+    assert_util.truthy(
+        not c.args.cmd:find("swaync"),
+        "swaync would race quickshell for the notification bus name: " .. c.args.cmd
+    )
+end
 assert_util.equal(
     exec_calls[2].args.cmd,
     "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",

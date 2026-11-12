@@ -15,6 +15,7 @@ Singleton {
     property bool disk: false
     property bool battery: false
     property bool wallpapers: false
+    property bool notifs: false
 
     // The y centre (in window coordinates) of the bar icon that opened a
     // popout, so the popout tracks the icon instead of the screen's middle -
@@ -24,6 +25,7 @@ Singleton {
     property real audioY: 0
     property real diskY: 0
     property real batteryY: 0
+    property real notifsY: 0
 
     // Bar tooltip: the text to show, and the y centre (in window coordinates)
     // of the widget that asked for it. The owner is tracked so that a pointer
@@ -42,6 +44,7 @@ Singleton {
         disk = false;
         battery = false;
         wallpapers = false;
+        notifs = false;
     }
     onNetworkChanged: if (network) {
         session = false;
@@ -49,6 +52,7 @@ Singleton {
         disk = false;
         battery = false;
         wallpapers = false;
+        notifs = false;
     }
     onAudioChanged: if (audio) {
         session = false;
@@ -56,6 +60,7 @@ Singleton {
         disk = false;
         battery = false;
         wallpapers = false;
+        notifs = false;
     }
     onDiskChanged: if (disk) {
         session = false;
@@ -63,6 +68,7 @@ Singleton {
         audio = false;
         battery = false;
         wallpapers = false;
+        notifs = false;
     }
     onBatteryChanged: if (battery) {
         session = false;
@@ -70,6 +76,7 @@ Singleton {
         audio = false;
         disk = false;
         wallpapers = false;
+        notifs = false;
     }
     onWallpapersChanged: if (wallpapers) {
         session = false;
@@ -77,6 +84,15 @@ Singleton {
         audio = false;
         disk = false;
         battery = false;
+        notifs = false;
+    }
+    onNotifsChanged: if (notifs) {
+        session = false;
+        network = false;
+        audio = false;
+        disk = false;
+        battery = false;
+        wallpapers = false;
     }
 
     function showTooltip(owner: Item, text: string, y: real): void {

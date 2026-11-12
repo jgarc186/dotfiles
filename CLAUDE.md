@@ -224,6 +224,7 @@ on the stock Arch `quickshell` package with no compiled dependencies.
 Run it with `qs -p ~/developer/dotfiles/quickshell` (or `qs` once installed, since
 the install script symlinks it to `~/.config/quickshell`). It **is** the bar
 `hypr/modules/autostart.lua` starts, in waybar's old slot — the switch is done.
+It is also the notification daemon, in swaync's (see Quickshell Notifications).
 `waybar/` is still in the repo and still themed by matugen, so starting it by
 hand works, but running both at once gives you two bars.
 
@@ -251,7 +252,8 @@ Structure:
   tooltip), `Theme` (light/dark, see `scripts/theme-mode`), `SysInfo`,
   `ShellState`, `Wallpapers` (the list, the one in use, and the live preview),
   `Disk` (`df` for the tooltip, plus a by-file-kind breakdown for the storage
-  popout from `quickshell/scripts/disk-usage`).
+  popout from `quickshell/scripts/disk-usage`), `Notifs` (the notification
+  server, its history and do-not-disturb).
   `services/Scheme.qml` is matugen output — never edit it; it is an instance of
   `services/M3Palette.qml`, which is the writable shape `Colours` keeps a second
   copy of for previewing.
@@ -269,17 +271,19 @@ Structure:
   `uevent` is polled every 5s, only while the popout is open (`Batt.watch()`).
 - `components/` — `StyledRect`/`StyledText`/`MaterialIcon`/`StateLayer` (M3 hover
   + press ripple), `StyledSlider`, `Anim`/`CAnim` (the motion tokens as animation
-  presets), `Tooltip`, and `MaterialShape`.
+  presets), `Tooltip`, `IconButton`, and `MaterialShape`.
 - `modules/` — `border/` (the frame and its exclusion zones), `bar/`, `session/`,
   `network/` (the Wi-Fi popout), `volume/` (the sink volume popout),
   `storage/` (what the disk is used for, opened from the disk icon),
   `battery/` (charge and battery health, opened from the battery icon),
-  `wallpapers/` (the bottom-edge wallpaper picker).
+  `wallpapers/` (the bottom-edge wallpaper picker),
+  `notifications/` (popups from the top-right corner, and the history popout
+  opened from the bell).
 
 Popouts and tooltips are owned by `modules/ShellWindow.qml`, not by the bar
 widget that triggers them: `BarWrapper` sets `clip: true`, so anything a bar
 widget drew beside itself would be cut off at the bar's edge. A widget flips a
-flag on `ShellState` (`session`, `network`, `audio`, `disk`, `battery` — mutually exclusive, each
+flag on `ShellState` (`session`, `network`, `audio`, `disk`, `battery`, `notifs` — mutually exclusive, each
 handler closing the others) or calls `ShellState.showTooltip(owner, text, y)`
 with its own centre in window coordinates, and `ShellWindow` renders it, adds it
 to the input `mask`, and turns on layershell keyboard focus when a popout needs
@@ -311,6 +315,14 @@ from a moving average over the radii. The focused workspace picks a random shape
 each time focus lands on it, which is where most of the "expressive" feel lives.
 
 **Gotchas found by running it (the linter can't catch these):**
+- **`left`, `right`, `top`, `bottom` can't be property names on anything that
+  is an Item** — they are its anchor lines (`parent.left`) and FINAL. qmllint
+  passes it; the load fails with `Cannot override FINAL property`, and a
+  *first* launch that fails takes the whole bar down rather than keeping the
+  old config.
+- **A write that leaves the content unchanged does not reload.** Rewriting a
+  file with what it already holds - the usual way to re-arm a dead watch - is
+  a no-op; the content has to differ.
 - **Create a new module's files before importing it.** Quickshell reloads the
   moment a watched file changes, so adding `import "foo"` to `ShellWindow.qml`
   before `modules/foo/` exists fails the reload (`Foo is not a type`) — and a
@@ -354,6 +366,70 @@ while it rescans. It walks `$HOME` and `/var/cache` only; "System & apps" is
 by running it: sizes are allocated blocks (`%b`), since Docker Desktop's sparse
 `Docker.raw` claims 915G and occupies 74G; and the awk runs under `LC_ALL=C`
 with no per-line `split()`, which took it from 60s to 18s.
+
+### Quickshell Notifications
+
+`services/Notifs.qml` owns `org.freedesktop.Notifications`, which swaync used
+to; `hypr/tests/test_autostart.lua` asserts swaync stays out of autostart.
+**Only one process can own that name and the first to ask keeps it**, so if
+another daemon is running, Quickshell's server never registers and every
+notification keeps going to the other one with nothing on screen saying so.
+`busctl --user status org.freedesktop.Notifications` names the owner. swaync
+and dunst both ship D-Bus activation files for the name, so if a notification
+arrives while *nothing* owns it (before Quickshell is up at login, or while it
+is down) D-Bus starts one of them, and it keeps the name from then on.
+
+**Popups are a drawer the frame grows**, not a window over the corner.
+`modules/notifications/Popups.qml` is painted in the frame's own colour and
+joined to the top and right borders by concave fillets of the frame's corner
+radius, so the frame bulges down to hold the cards. All the motion is height:
+each card's slot opens from zero with the card pinned to its bottom edge (it
+drops out of the edge above) and collapses the same way (it slides up into the
+edge above - the frame, for the top one), and the drawer follows the sum. Its
+input region is the drawer only; the fillets are frame and pass clicks through.
+Popups show on the focused monitor.
+
+The server's `Notification` is destroyed the moment it closes, which is exactly
+when its popup still has an absorb animation to play. So each one is wrapped in
+a `Notif` that binds to it while it lives and freezes a copy (assigning a
+property drops its binding) when it closes; cards only ever read the wrapper.
+History (`Notifs.list`) and the drawer (`Notifs.popups`) are separate lists for
+the same reason: a dismissed popup leaves the history at once and the drawer
+only once it has been absorbed.
+
+Clicking a card runs the sender's default action, or otherwise sends the popup
+into the frame and keeps it in the history; the ✕ dismisses it outright. The
+pointer on a popup holds its timeout. Critical ones stay until dismissed and
+are the only ones do-not-disturb lets through. DND is a `PersistentProperties`,
+since every theme change reloads the config.
+
+**Gotchas found by running it:**
+- **`expireTimeout` is in milliseconds**, as the sender gave it, and -1 when it
+  gave none.
+- **A reload re-announces every retained notification** through `onNotification`,
+  flagged `lastGeneration` (that is what `keepOnReload` means). Wrapping
+  `trackedNotifications` at startup as well doubles the history; popping the
+  re-announced ones shows them all again on every theme change.
+- **`notify-send -i` arrives as an image, not an icon**: libnotify sends it as the
+  `image-path` hint, which Quickshell serves as `image://icon/<name>`. The icon
+  provider answers a missing name with a magenta checkerboard that loads
+  successfully, so `status === Image.Ready` can't catch it; `Notif` moves those
+  to the icon slot, where `Quickshell.iconPath(name, true)` returns "" instead.
+- **`Timer.restart()` ignores a `running` binding.** Restarting the timeout of a
+  critical notification (no timeout, so `running` bound false) started a 1ms
+  timer and the popup vanished as it appeared.
+- **A reload can leave the server live on the bus with no handler connected.**
+  Twice, after a burst of writes, notifications were accepted (an id came back,
+  `GetServerInformation` answered) and silently dropped until a restart. A
+  reloaded server is only connected in a post-reload hook, and `Notifs` runs
+  that hook by hand if it hasn't fired within 3s, logging
+  `Notifs: the reload never handed ...`. Not reproduced since, in ~50 reloads,
+  so the recovery itself is unexercised; a restart is the fallback. A dropped
+  notification is closed on the bus immediately, so
+  `timeout 2 notify-send --wait -t 2000 x` exiting 124 means it was delivered.
+- **A generation's teardown destroys the wrappers before the cards**, so card
+  bindings read `root.notif?.` - without it every reload logs a screenful of
+  `Cannot read property ... of null`.
 
 ### Quickshell Config Tests
 

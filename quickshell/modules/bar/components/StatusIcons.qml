@@ -51,6 +51,8 @@ StyledRect {
                         return bluetoothComp;
                     case "battery":
                         return batteryComp;
+                    case "notifications":
+                        return notifsComp;
                     }
                     return null;
                 }
@@ -291,6 +293,56 @@ StyledRect {
                 animate: true
                 text: Icons.getBatteryIcon(Batt.percentage, Batt.charging)
                 color: batt.colour
+            }
+        }
+    }
+
+    // Hovering counts what is waiting, clicking opens the notification history
+    Component {
+        id: notifsComp
+
+        Item {
+            id: notifs
+
+            readonly property string tooltip: {
+                if (Notifs.dnd)
+                    return Notifs.count > 0 ? `Do not disturb \u00b7 ${Notifs.count}` : "Do not disturb";
+                if (Notifs.count === 0)
+                    return "No notifications";
+                return Notifs.count === 1 ? "1 notification" : `${Notifs.count} notifications`;
+            }
+
+            implicitWidth: notifsIcon.implicitWidth
+            implicitHeight: notifsIcon.implicitHeight
+
+            onTooltipChanged: ShellState.updateTooltip(notifs, tooltip)
+
+            StateLayer {
+                // Square the hit area up without stretching the row
+                anchors.fill: undefined
+                anchors.centerIn: parent
+                implicitWidth: implicitHeight
+                implicitHeight: notifsIcon.implicitHeight + Appearance.padding.small
+                radius: Appearance.rounding.full
+                color: root.colour
+
+                onClicked: {
+                    ShellState.notifsY = notifs.mapToItem(null, 0, notifs.height / 2).y;
+                    ShellState.notifs = !ShellState.notifs;
+                }
+                onEntered: ShellState.showTooltip(notifs, notifs.tooltip, notifs.mapToItem(null, 0, notifs.height / 2).y)
+                onExited: ShellState.hideTooltip(notifs)
+            }
+
+            MaterialIcon {
+                id: notifsIcon
+
+                anchors.centerIn: parent
+
+                animate: true
+                text: Notifs.dnd ? "notifications_off" : Notifs.count > 0 ? "notifications_unread" : "notifications"
+                color: root.colour
+                fill: ShellState.notifs ? 1 : 0
             }
         }
     }

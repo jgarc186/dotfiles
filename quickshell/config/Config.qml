@@ -12,6 +12,7 @@ Singleton {
     readonly property BarConfig bar: BarConfig {}
     readonly property GeneralConfig general: GeneralConfig {}
     readonly property WallpaperConfig wallpapers: WallpaperConfig {}
+    readonly property NotifsConfig notifs: NotifsConfig {}
 
     component GeneralConfig: QtObject {
         readonly property bool useTwelveHourClock: false
@@ -41,6 +42,20 @@ Singleton {
 
         readonly property int itemWidth: 200
         readonly property int maxShown: 7
+    }
+
+    component NotifsConfig: QtObject {
+        // Width of the cards in the top-right drawer
+        readonly property int width: 380
+        // How long a popup stays up when the sender doesn't say (ms). A
+        // critical notification stays until it is dismissed, whatever it asks.
+        readonly property int defaultTimeout: 6000
+        // Popups on screen at once; the oldest is absorbed to make room
+        readonly property int maxPopups: 4
+        // Notifications kept in the history popout; the oldest is dropped
+        readonly property int maxHistory: 50
+        // Lines of body text before it is elided
+        readonly property int bodyLines: 3
     }
 
     component BorderConfig: QtObject {
@@ -94,7 +109,7 @@ Singleton {
     }
 
     component StatusIconsConfig: QtObject {
-        readonly property list<string> entries: ["memory", "disk", "audio", "network", "bluetooth", "battery"]
+        readonly property list<string> entries: ["memory", "disk", "audio", "network", "bluetooth", "battery", "notifications"]
         // The filesystem the "disk" entry reports on, as a path `df` can take.
         // "/" rather than $HOME since home is on the root partition here; point
         // it at a mountpoint if that stops being true.

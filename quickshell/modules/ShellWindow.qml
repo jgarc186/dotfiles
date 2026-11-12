@@ -16,6 +16,7 @@ import "bar"
 import "battery"
 import "border"
 import "network"
+import "notifications"
 import "session"
 import "storage"
 import "volume"
@@ -46,6 +47,10 @@ StyledWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Top
     // The Wi-Fi popout has a password field, so it needs keys too
+    // Popups only ever show on one screen: the one with focus, which is where
+    // you are looking. Falls back to every screen before Hyprland has said.
+    readonly property bool notifsHere: !Hypr.focusedMonitor || Hypr.monitorFor(screen) === Hypr.focusedMonitor
+
     WlrLayershell.keyboardFocus: ShellState.session || ShellState.network ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // Every popout is `item: <loader>.active ? <loader> : null`, never the bare
@@ -81,6 +86,18 @@ StyledWindow {
             item: battery.active ? battery : null
         }
 
+        Region {
+            item: notifCenter.active ? notifCenter : null
+        }
+
+        // Height 0 once the last popup is absorbed, so it takes no clicks when
+        // there is nothing in it. Only the drawer itself, not the fillets
+        // joining it to the frame - those are frame, and pass clicks through
+        // like the rest of it.
+        Region {
+            item: notifPopups.visible && notifPopups.height > 0 ? notifPopups : null
+        }
+
         // Both halves of the wallpaper picker have to be here, and this is the
         // only reason the bottom edge is clickable at all: everything outside the
         // mask passes straight through to the desktop, which is what the rest of
@@ -113,6 +130,21 @@ StyledWindow {
         screen: root.screen
         contentWidth: root.barWidth
         fullscreen: root.fullscreen
+    }
+
+    // Notification popups, hanging off the frame's top-right corner. Declared
+    // after the Border so the drawer paints over the corner it grows out of.
+    Popups {
+        id: notifPopups
+
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: borderTop
+        anchors.rightMargin: borderRight
+
+        visible: root.notifsHere
+        borderTop: root.fullscreen ? 0 : Config.border.thickness
+        borderRight: root.fullscreen ? 0 : Config.border.thickness
     }
 
     // Session popout, anchored to the power button's end of the bar. Stays
@@ -266,6 +298,35 @@ StyledWindow {
         }
     }
 
+    // Notification history, pinned to the bell the same way as the Wi-Fi one.
+    Loader {
+        id: notifCenter
+
+        anchors.left: bar.right
+        anchors.leftMargin: Appearance.spacing.small
+
+        y: Math.max(Config.border.thickness, Math.min(parent.height - Config.border.thickness - height, ShellState.notifsY - height / 2))
+
+        active: ShellState.notifs || opacity > 0
+        opacity: ShellState.notifs ? 1 : 0
+        scale: ShellState.notifs ? 1 : 0.85
+        transformOrigin: Item.Left
+
+        sourceComponent: Center {}
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Behavior on scale {
+            Anim {
+                type: Anim.FastSpatial
+            }
+        }
+    }
+
     // The bottom edge of the frame, as a trigger for the wallpaper picker.
     //
     // Invisible and narrow on purpose: it is masked into the shell's input
@@ -378,7 +439,7 @@ StyledWindow {
         // Held over while the bubble fades out, so it doesn't blank mid-fade
         property string lastText: ShellState.tooltipText
 
-        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.disk && !ShellState.battery && !ShellState.wallpapers
+        readonly property bool shown: ShellState.tooltipText !== "" && !ShellState.session && !ShellState.network && !ShellState.audio && !ShellState.disk && !ShellState.battery && !ShellState.notifs && !ShellState.wallpapers
 
         anchors.left: bar.right
         anchors.leftMargin: Appearance.spacing.small
@@ -414,7 +475,7 @@ StyledWindow {
         // closes when the pointer leaves, so it never needs click-outside-to-
         // dismiss - and taking a grab for it costs the pointer events it lives
         // on.
-        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.disk || ShellState.battery
+        active: ShellState.session || ShellState.network || ShellState.audio || ShellState.disk || ShellState.battery || ShellState.notifs
         windows: [root]
         onCleared: {
             ShellState.session = false;
@@ -422,6 +483,7 @@ StyledWindow {
             ShellState.audio = false;
             ShellState.disk = false;
             ShellState.battery = false;
+            ShellState.notifs = false;
             ShellState.wallpapers = false;
         }
     }
