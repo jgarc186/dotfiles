@@ -18,8 +18,16 @@ assert_util.equal(#exec_calls, 3, "expected 3 exec_cmd calls from the 3 exec-onc
 
 assert_util.equal(
     exec_calls[1].args.cmd,
-    "awww-daemon & quickshell && nm-applet & xsettingsd & swayosd-server & hyprsunset",
+    "awww-daemon & quickshell & nm-applet & xsettingsd & swayosd-server & hyprsunset",
     "first autostart command mismatch"
+)
+
+-- `&&` binds tighter than `&`, so `quickshell && x &` is one background job in
+-- which x only starts once quickshell exits - which it doesn't, for a session.
+-- Everything here runs side by side.
+assert_util.truthy(
+    not exec_calls[1].args.cmd:find("&&", 1, true),
+    "`&&` in the autostart line holds what follows it until the previous program exits: " .. exec_calls[1].args.cmd
 )
 
 -- Quickshell is the notification daemon now (services/Notifs.qml). Only one
