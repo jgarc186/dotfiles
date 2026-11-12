@@ -395,11 +395,14 @@ re-read it; its journal shows which file won.
 **Popups are a drawer the frame grows**, not a window over the corner.
 `modules/notifications/Popups.qml` is painted in the frame's own colour and
 joined to the top and right borders by concave fillets of the frame's corner
-radius, so the frame bulges down to hold the cards. All the motion is height:
-each card's slot opens from zero with the card pinned to its bottom edge (it
-drops out of the edge above) and collapses the same way (it slides up into the
-edge above - the frame, for the top one), and the drawer follows the sum. Its
-input region is the drawer only; the fillets are frame and pass clicks through.
+radius, so the frame bulges out to hold the cards. Cards move sideways, in and
+out of the right border: a new card's place in the column opens while it slides
+in from the right, and a closing one slides out to the right before its place
+closes up. The drawer is only as wide as its furthest-out card, so the first
+card brings it out of the border and the last takes it back in, rather than an
+empty drawer dropping down from the top edge. The slide deliberately doesn't
+overshoot: past its place, the card would be clipped at the drawer's left edge.
+Its input region is the drawer only; the fillets are frame and pass clicks through.
 Popups show on the focused monitor.
 
 The server's `Notification` is destroyed the moment it closes, which is exactly

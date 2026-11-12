@@ -4,16 +4,16 @@
 //
 // The drawer is painted in the frame's own colour and joined to it by concave
 // fillets where it meets the top and right borders, so it doesn't read as a
-// window floating over the corner: the frame itself bulges down to hold the
+// window floating over the corner: the frame itself bulges out to hold the
 // cards. Caelestia gets that melt from an SDF plugin; for a single drawer
 // hanging off two straight edges, one path drawn round it does the same job.
 //
-// The motion is all height. A new card's slot opens from zero, pushing the ones
-// below it down and the drawer's bottom edge with them, so it drops out of the
-// frame. A closing card's slot collapses with the card pinned to its bottom
-// edge, so the card slides up under whatever is above it - the frame, for the
-// top one - and the drawer shrinks after it. The last one to go takes the whole
-// drawer back into the border.
+// Cards move sideways, in and out of the right border. A new one's place in the
+// column opens (pushing any below it down) while the card slides in from the
+// right; a closing one slides back out to the right, and only then does its
+// place close up. The drawer is as wide as its furthest-out card, so the first
+// card brings the drawer out of the border with it and the last one takes it
+// back in - an empty drawer never drops down from the top edge.
 //
 pragma ComponentBehavior: Bound
 
@@ -37,6 +37,20 @@ Item {
     // replace
     readonly property real rounding: Config.border.rounding
 
+    // How far out of the right border the drawer reaches, 0-1: as far as its
+    // furthest-out card. Below 1 only while the first card is coming in or the
+    // last one going; with any card settled it is the full width.
+    readonly property real extent: {
+        let furthest = 0;
+        for (const child of column.children) {
+            const slot = child as Slot;
+            if (slot)
+                furthest = Math.max(furthest, slot.slide);
+        }
+        return Math.min(1, furthest);
+    }
+    readonly property real drawerWidth: width * extent
+
     // Gap below the last card. Animated on its own, since it appears with the
     // first card and goes with the last, and a snap there undoes the illusion.
     property real bottomPad: column.implicitHeight > 0 ? padding : 0
@@ -55,9 +69,11 @@ Item {
 
         // Reaches up over the top border, right over the right one and left by
         // one fillet. Sized from root rather than from itself: a Shape reading
-        // its own size in its path is a binding loop.
-        readonly property real r: Math.min(root.rounding, root.height / 2)
-        readonly property real edgeLeft: root.rounding
+        // its own size in its path is a binding loop. The radius also shrinks
+        // with the drawer's width, or a drawer narrower than two fillets would
+        // draw its bottom corners crossed over.
+        readonly property real r: Math.min(root.rounding, root.height / 2, root.drawerWidth / 2)
+        readonly property real edgeLeft: root.rounding + root.width - root.drawerWidth
         readonly property real edgeRight: root.rounding + root.width
         readonly property real edgeTop: root.borderTop
         readonly property real edgeBottom: root.borderTop + root.height
@@ -67,7 +83,7 @@ Item {
         width: root.width + root.rounding + root.borderRight
         height: root.height + root.borderTop + root.rounding
 
-        visible: root.height > 0
+        visible: root.height > 0 && root.drawerWidth > 0
         preferredRendererType: Shape.CurveRenderer
         antialiasing: true
 
@@ -143,7 +159,8 @@ Item {
         }
     }
 
-    // Clipped so a slot that is still opening never draws past the drawer
+    // Clipped at the drawer's right edge, which is the right border's inner
+    // edge: a card sliding out disappears under the border rather than over it
     Item {
         anchors.fill: parent
         clip: true
@@ -166,21 +183,27 @@ Item {
         }
     }
 
-    // A card plus the gap above it. Its height is the animation: the card is
-    // pinned to the bottom, so a slot growing from nothing drops the card out
-    // of the edge above, and one shrinking to nothing pulls it back up into it.
+    // A card plus the gap above it. `reveal` is how much of its place in the
+    // column is open, `slide` how far out of the right border the card is.
     component Slot: Item {
         id: slot
 
         required property Notifs.Notif modelData
 
-        property real progress: 0
+        property real reveal: 0
+        property real slide: 0
 
         width: column.width
-        implicitHeight: (card.implicitHeight + root.padding) * progress
+        implicitHeight: (card.implicitHeight + root.padding) * reveal
         clip: true
 
-        Component.onCompleted: openAnim.start()
+        Component.onCompleted: {
+            // Into an empty drawer, which has no width yet: its place can open
+            // at once, unseen, so the card and the drawer only move sideways
+            if (root.extent === 0)
+                reveal = 1;
+            openAnim.start();
+        }
 
         Connections {
             target: slot.modelData
@@ -196,45 +219,62 @@ Item {
             }
         }
 
-        // The springy curve overshoots past 1, so the card drops a little
-        // further than its place and settles back
-        Anim {
+        // The place opens while the card is on its way in. Decelerating with
+        // no overshoot: past 1, the card would be cut off by the drawer's left
+        // edge.
+        ParallelAnimation {
             id: openAnim
 
-            target: slot
-            property: "progress"
-            to: 1
-            type: Anim.SlowSpatial
+            Anim {
+                target: slot
+                property: "reveal"
+                to: 1
+                type: Anim.Emphasized
+            }
+
+            Anim {
+                target: slot
+                property: "slide"
+                to: 1
+                duration: Appearance.anim.durations.expressiveDefaultSpatial
+                easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
+            }
         }
 
-        // Accelerating out, so it is drawn in rather than eased away
-        Anim {
+        // Out to the right first, accelerating so it is drawn into the border
+        // rather than eased away, and then the gap it left closes
+        SequentialAnimation {
             id: closeAnim
 
-            target: slot
-            property: "progress"
-            to: 0
-            duration: Appearance.anim.durations.normal
-            easing.bezierCurve: Appearance.anim.curves.emphasizedAccel
+            Anim {
+                target: slot
+                property: "slide"
+                to: 0
+                duration: Appearance.anim.durations.normal
+                easing.bezierCurve: Appearance.anim.curves.emphasizedAccel
+            }
 
-            onFinished: Notifs.absorbed(slot.modelData)
+            Anim {
+                target: slot
+                property: "reveal"
+                to: 0
+                type: Anim.Emphasized
+            }
+
+            ScriptAction {
+                script: Notifs.absorbed(slot.modelData)
+            }
         }
 
         NotificationCard {
             id: card
 
-            anchors.bottom: parent.bottom
-            x: root.padding
+            x: root.padding + root.width * (1 - slot.slide)
+            y: root.padding
             width: parent.width - root.padding * 2
 
             notif: slot.modelData
             inDrawer: true
-
-            // Fades over the first part of the way in and the last part of the
-            // way out, and narrows slightly as it goes into the frame
-            opacity: Math.min(1, slot.progress * 1.5)
-            scale: 0.92 + 0.08 * Math.min(1, slot.progress)
-            transformOrigin: Item.Top
         }
     }
 }
