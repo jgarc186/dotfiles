@@ -46,6 +46,13 @@ Singleton {
         reloadableId: "notifs"
 
         property bool dnd: false
+        // When each notification in the history arrived, as JSON of id ->
+        // epoch ms. The server keeps notifications across a reload but not
+        // when they came, and the wrappers are rebuilt, so without this every
+        // theme change restamped the whole history "now". A string because a
+        // plain property type is certain to survive the hand-over. Ids restart
+        // with quickshell, but so does this.
+        property string times: "{}"
     }
 
     NotificationServer {
@@ -66,6 +73,14 @@ Singleton {
         onTrackedNotificationsChanged: root.live = true
 
         onNotification: notification => {
+            // A transient notification exists only as a popup, so one that
+            // will never pop up - under do-not-disturb, or re-announced after
+            // a reload - is left untracked, and the server discards it when
+            // this returns. Expiring it from here would do nothing: the server
+            // only learns the id once this handler is done.
+            if (notification.transient && (notification.lastGeneration || (root.dnd && notification.urgency !== NotificationUrgency.Critical)))
+                return;
+
             // Untracked notifications are discarded as soon as this returns -
             // including a duplicate, so this comes before the check below
             notification.tracked = true;
@@ -112,8 +127,26 @@ Singleton {
     }
 
     function add(notification: Notification, pop: bool): void {
+        // A re-announced notification keeps the time it first arrived
+        const times = JSON.parse(persist.times);
+        const kept = notification.lastGeneration ? times[notification.id] : undefined;
+        const time = kept ? new Date(kept) : new Date();
+
+        // A new arrival means any re-announcing is over, so whatever isn't in
+        // the history by now never will be. Pruning during the re-announce
+        // would throw away times for notifications not yet re-added.
+        if (!notification.lastGeneration)
+            for (const id of Object.keys(times))
+                if (!list.some(n => String(n.notifId) === id))
+                    delete times[id];
+
+        times[notification.id] = time.getTime();
+        persist.times = JSON.stringify(times);
+
         const notif = notifComp.createObject(root, {
-            notification
+            notification,
+            notifId: notification.id,
+            time
         });
         list = [notif, ...list];
 
@@ -132,6 +165,13 @@ Singleton {
         // Copied first: each dismiss() rewrites `list` under the loop
         for (const n of [...list])
             n.dismiss();
+    }
+
+    // Drops a closed notification's arrival time from the persisted record
+    function forget(id: int): void {
+        const times = JSON.parse(persist.times);
+        delete times[id];
+        persist.times = JSON.stringify(times);
     }
 
     // Called by the drawer once a popup has finished being absorbed
@@ -182,6 +222,11 @@ Singleton {
         id: notif
 
         required property Notification notification
+        // Copied out, since the notification can be gone by the time it is
+        // needed (dropping its arrival time from the persisted record)
+        required property int notifId
+        // When it arrived - before the last reload, for a re-announced one
+        required property date time
 
         // Up in the drawer. False while it is being absorbed.
         property bool popup: false
@@ -191,8 +236,6 @@ Singleton {
         property bool hovered: false
         // Gone from the server; the frozen copy below is all that is left
         property bool closed: false
-
-        readonly property date time: new Date()
 
         // Bound while the notification lives - a sender replacing one by id
         // updates these in place - and frozen by freeze() when it closes
@@ -230,13 +273,15 @@ Singleton {
         readonly property Timer timer: Timer {
             interval: Math.max(1, notif.timeout)
             running: notif.popup && !notif.hovered && notif.timeout > 0
-            onTriggered: {
-                notif.popup = false;
-                // Transient ones were never meant for the history
-                if (notif.notification?.transient)
-                    notif.notification.expire();
-            }
+            onTriggered: notif.popup = false
         }
+
+        // Transient ones were never meant for the history, so they go however
+        // the popup does: timed out, clicked away, or pushed out by a newer
+        // one. Not when drop() is what cleared popup - that one is already
+        // closing, and expiring it there would close it a second time.
+        onPopupChanged: if (!popup && !closed && notification?.transient)
+            notification.expire()
 
         readonly property Connections conn: Connections {
             target: notif.notification
@@ -294,6 +339,7 @@ Singleton {
             closed = true;
             popup = false;
             root.list = root.list.filter(n => n !== notif);
+            root.forget(notifId);
             if (!listed)
                 notif.destroy();
         }

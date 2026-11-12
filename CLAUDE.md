@@ -440,6 +440,17 @@ since every theme change reloads the config.
   so the recovery itself is unexercised; a restart is the fallback. A dropped
   notification is closed on the bus immediately, so
   `timeout 2 notify-send --wait -t 2000 x` exiting 124 means it was delivered.
+- **The server doesn't keep arrival times**, and the wrappers are rebuilt on a
+  reload, so `Notifs` persists them by id in its `PersistentProperties`.
+  Without that every theme change restamped the whole history "now". The
+  record is only pruned on a fresh arrival, since pruning mid re-announce
+  drops times for notifications not yet re-added.
+- **A transient notification goes wherever its popup goes** (`onPopupChanged`
+  expires it), so it leaves the history whether it timed out, was clicked away
+  or was pushed out by `maxPopups`. Ones that will never pop up (DND, or
+  re-announced after a reload) are left untracked in `onNotification` instead:
+  `expire()` from inside that handler is a no-op, because the server only
+  records the id once the handler returns.
 - **A generation's teardown destroys the wrappers before the cards**, so card
   bindings read `root.notif?.` - without it every reload logs a screenful of
   `Cannot read property ... of null`.
