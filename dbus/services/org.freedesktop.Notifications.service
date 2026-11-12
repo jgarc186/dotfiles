@@ -1,0 +1,16 @@
+# Keeps D-Bus from starting another notification daemon.
+#
+# Quickshell is the notification daemon (quickshell/services/Notifs.qml), but
+# swaync and dunst both ship activation files for this name in
+# /usr/share/dbus-1/services. If a notification arrives while nothing owns the
+# name - at login before Quickshell is up, or while it restarts - the bus starts
+# one of them, and it keeps the name from then on, so Quickshell can't take it.
+#
+# `install` links this into ~/.local/share/dbus-1/services, which the bus reads
+# before /usr/share; the first file to claim a name wins and the rest are
+# ignored as duplicates. Activation then runs `false` and fails, so a
+# notification sent while Quickshell is down is lost rather than handing the
+# desktop to another daemon.
+[D-BUS Service]
+Name=org.freedesktop.Notifications
+Exec=/usr/bin/false

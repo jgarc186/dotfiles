@@ -141,6 +141,8 @@ Each top-level directory maps to one tool:
 - `ghostty/` + `kitty/` — Terminal emulators with custom cursor shaders in `ghostty/shaders/`
 - `tmux/` — Terminal multiplexer; plugins via TPM (git submodules in `tmux/plugins/`); colours from catppuccin, flavour chosen by the mode in `colors.conf`
 - `matugen/` — Theme generator config and templates
+- `dbus/services/` — user D-Bus activation overrides, linked per file into
+  `~/.local/share/dbus-1/services` (see Quickshell Notifications)
 - `scripts/` — `t`: fzf-based tmux session switcher (symlinked to `~/.local/bin/t`); `theme-mode`: switches the desktop between light and dark (see below); `roadmap-to-jira`: reads `ROAD_MAP.md` in a git repo, uses Claude Opus to generate tickets, and pushes an Epic + Stories to Jira (requires `atlassian-python-api` and `PyYAML`; needs env vars `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`); `hooks/`: the tracked pre-commit/pre-push hooks, see Git Hooks
 - `zshrc/zshrc.conf` — Shell config (Oh-My-Zsh, aliases for git/dotnet/laravel)
 - `starship/starship.toml` — Shell prompt (Catppuccin Mocha palette)
@@ -374,10 +376,21 @@ to; `hypr/tests/test_autostart.lua` asserts swaync stays out of autostart.
 **Only one process can own that name and the first to ask keeps it**, so if
 another daemon is running, Quickshell's server never registers and every
 notification keeps going to the other one with nothing on screen saying so.
-`busctl --user status org.freedesktop.Notifications` names the owner. swaync
-and dunst both ship D-Bus activation files for the name, so if a notification
-arrives while *nothing* owns it (before Quickshell is up at login, or while it
-is down) D-Bus starts one of them, and it keeps the name from then on.
+`busctl --user status org.freedesktop.Notifications` names the owner.
+
+swaync and dunst both ship D-Bus activation files for the name, so a
+notification arriving while *nothing* owns it (before Quickshell is up at login,
+or while it restarts) would have the bus start one of them, which then keeps the
+name. `dbus/services/org.freedesktop.Notifications.service` (linked by `install`
+into `~/.local/share/dbus-1/services`, the file rather than the directory)
+claims the name first with `Exec=/usr/bin/false`: dbus-broker takes the first
+file per name in search order, user directory first, and logs the system ones as
+`Ignoring duplicate name`. So a notification sent while Quickshell is down fails
+(`NameHasNoOwner ... unit failed`, and a failed `dbus-:1.2-org.freedesktop.Notifications@N`
+unit in the user journal) instead of handing the desktop to another daemon.
+After changing the file, `busctl --user call org.freedesktop.DBus
+/org/freedesktop/DBus org.freedesktop.DBus ReloadConfig` makes the broker
+re-read it; its journal shows which file won.
 
 **Popups are a drawer the frame grows**, not a window over the corner.
 `modules/notifications/Popups.qml` is painted in the frame's own colour and
