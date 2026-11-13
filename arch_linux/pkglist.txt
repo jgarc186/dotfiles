@@ -13,7 +13,6 @@ cmatrix
 cronie
 docker-desktop
 dolphin
-dunst
 efibootmgr
 fastfetch
 fd
